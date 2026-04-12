@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">SOS Guardian</string>
+    <string name="accessibility_service_label">SOS Guardian Trigger Service</string>
+    <string name="accessibility_service_description">Listens for the SOS volume-button chord so the app can trigger emergency actions while the device is locked or in the background.</string>
+    <string name="monitoring_channel_name">SOS monitoring</string>
+    <string name="monitoring_channel_description">Shows whether SOS background monitoring is armed.</string>
+    <string name="active_channel_name">SOS active</string>
+    <string name="active_channel_description">Shows that emergency actions are currently running.</string>
+</resources>
