@@ -2,6 +2,7 @@ package com.example.sosapp.ui
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -30,10 +31,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.PhoneInTalk
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,9 +55,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -68,6 +74,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sosapp.SosApplication
 import com.example.sosapp.data.SosMode
@@ -81,25 +90,78 @@ fun SosApp(application: SosApplication) {
     val settings by viewModel.settings.collectAsState()
     val runtimeState by viewModel.runtimeState.collectAsState()
     val context = LocalContext.current
+    val activity = context.findActivity()
     val snackbarHostState = remember { SnackbarHostState() }
+    var permissionFeedback by remember { mutableStateOf<String?>(null) }
 
-    val permissionsLauncher = rememberLauncherForActivityResult(
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        permissionFeedback = if (granted) {
+            "Call permission granted."
+        } else {
+            if (activity?.shouldShowRequestPermissionRationale(Manifest.permission.CALL_PHONE) == false) {
+                "Call permission was denied permanently. Open app settings to enable it."
+            } else {
+                "Call permission is still missing."
+            }
+        }
+    }
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        permissionFeedback = if (granted) {
+            "SMS permission granted."
+        } else {
+            if (activity?.shouldShowRequestPermissionRationale(Manifest.permission.SEND_SMS) == false) {
+                "SMS permission was denied permanently. Open app settings to enable it."
+            } else {
+                "SMS permission is still missing."
+            }
+        }
+    }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) { }
-
-    LaunchedEffect(runtimeState.message) {
-        snackbarHostState.showSnackbar(runtimeState.message)
+    ) { results ->
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        permissionFeedback = if (granted) {
+            "Location permission granted."
+        } else {
+            val permanentlyDenied = activity?.let {
+                !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
+                    !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+            } == true
+            if (permanentlyDenied) {
+                "Location permission was denied permanently. Open app settings to enable it."
+            } else {
+                "Location permission is still missing."
+            }
+        }
+    }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        permissionFeedback = if (granted) {
+            "Camera permission granted."
+        } else {
+            if (activity?.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) == false) {
+                "Camera permission was denied permanently. Open app settings to enable it."
+            } else {
+                "Camera permission is still missing."
+            }
+        }
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        permissionFeedback = if (granted) "Notification permission granted." else "Notification permission is still missing."
     }
 
-    val permissionList = buildList {
-        add(Manifest.permission.CALL_PHONE)
-        add(Manifest.permission.SEND_SMS)
-        add(Manifest.permission.ACCESS_FINE_LOCATION)
-        add(Manifest.permission.ACCESS_COARSE_LOCATION)
-        add(Manifest.permission.CAMERA)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.POST_NOTIFICATIONS)
-        }
+    LaunchedEffect(runtimeState.message, permissionFeedback) {
+        val message = permissionFeedback ?: runtimeState.message
+        snackbarHostState.showSnackbar(message)
+        permissionFeedback = null
     }
 
     Scaffold(
@@ -132,7 +194,43 @@ fun SosApp(application: SosApplication) {
                     context = context,
                     currentSettings = settings,
                     runtimeMode = runtimeState.mode,
-                    requestPermissions = { permissionsLauncher.launch(permissionList.toTypedArray()) },
+                    callPermissionAction = buildRuntimePermissionAction(
+                        context = context,
+                        activity = activity,
+                        permission = Manifest.permission.CALL_PHONE,
+                        launchRequest = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
+                    ),
+                    smsPermissionAction = buildRuntimePermissionAction(
+                        context = context,
+                        activity = activity,
+                        permission = Manifest.permission.SEND_SMS,
+                        launchRequest = { smsPermissionLauncher.launch(Manifest.permission.SEND_SMS) },
+                    ),
+                    locationPermissionAction = buildLocationPermissionAction(
+                        context = context,
+                        activity = activity,
+                        launchRequest = {
+                            locationPermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
+                            )
+                        },
+                    ),
+                    cameraPermissionAction = buildRuntimePermissionAction(
+                        context = context,
+                        activity = activity,
+                        permission = Manifest.permission.CAMERA,
+                        launchRequest = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
+                    ),
+                    requestNotificationPermission = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            permissionFeedback = "Notification permission is not needed on this Android version."
+                        }
+                    },
                     onSaveSettings = viewModel::saveSettings,
                     onManualTest = viewModel::triggerManualTest,
                     onManualSos = viewModel::triggerManualSos,
@@ -147,7 +245,11 @@ private fun SetupScreen(
     context: Context,
     currentSettings: SosSettings,
     runtimeMode: SosMode,
-    requestPermissions: () -> Unit,
+    callPermissionAction: PermissionAction,
+    smsPermissionAction: PermissionAction,
+    locationPermissionAction: PermissionAction,
+    cameraPermissionAction: PermissionAction,
+    requestNotificationPermission: () -> Unit,
     onSaveSettings: (SosSettings, () -> Unit) -> Unit,
     onManualTest: () -> Unit,
     onManualSos: () -> Unit,
@@ -163,6 +265,14 @@ private fun SetupScreen(
 
     val scrollState = rememberScrollState()
     val numberValid = PhoneNumberValidator.isValid(draftNumber)
+    val permissionState = rememberPermissionState(context)
+    val setupReady = numberValid &&
+        permissionState.accessibilityEnabled &&
+        permissionState.callPermission &&
+        permissionState.smsPermission &&
+        permissionState.locationPermission &&
+        permissionState.cameraPermission &&
+        permissionState.batteryOptimizationIgnored
 
     Column(
         modifier = Modifier
@@ -172,7 +282,15 @@ private fun SetupScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HeroCard(enabled = draftEnabled, runtimeMode = runtimeMode)
-        PermissionsCard(context = context, onRequestPermissions = requestPermissions)
+        PermissionsCard(
+            context = context,
+            permissionState = permissionState,
+            callPermissionAction = callPermissionAction,
+            smsPermissionAction = smsPermissionAction,
+            locationPermissionAction = locationPermissionAction,
+            cameraPermissionAction = cameraPermissionAction,
+            requestNotificationPermission = requestNotificationPermission,
+        )
         WarningCard()
 
         Card(
@@ -228,9 +346,21 @@ private fun SetupScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Arm SOS monitoring", fontWeight = FontWeight.SemiBold)
-                        Text("Requires a valid number plus the accessibility service enabled.", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            if (setupReady) {
+                                "Everything required for SOS is ready."
+                            } else {
+                                "Finish the checklist above before arming SOS monitoring."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
-                    Switch(checked = draftEnabled, onCheckedChange = { draftEnabled = it })
+                    Switch(
+                        checked = draftEnabled,
+                        onCheckedChange = { checked ->
+                            draftEnabled = if (checked && !setupReady) false else checked
+                        },
+                    )
                 }
 
                 Button(
@@ -239,7 +369,7 @@ private fun SetupScreen(
                     onClick = {
                         val updated = currentSettings.copy(
                             emergencyNumber = draftNumber.trim(),
-                            enabled = draftEnabled,
+                            enabled = draftEnabled && setupReady,
                             sirenVolumeFraction = draftVolume,
                             triggerHoldMs = draftHoldMs.toLong(),
                             chordWindowMs = draftChordWindow.toLong(),
@@ -250,7 +380,7 @@ private fun SetupScreen(
                         onSaveSettings(updated) { draftEnabled = false }
                     },
                 ) {
-                    Text("Save setup")
+                    Text(if (setupReady) "Save and arm setup" else "Save setup")
                 }
             }
         }
@@ -265,7 +395,11 @@ private fun SetupScreen(
             ) {
                 Text("Readiness", color = Color(0xFFFFF7ED), style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Use the test button first. If your device blocks lock-screen key filtering, keep the app armed in the foreground service as a fallback.",
+                    if (setupReady) {
+                        "Use the test button first. If your device blocks lock-screen key filtering, keep the app armed in the foreground service as a fallback."
+                    } else {
+                        "Follow the checklist from top to bottom: Accessibility, Call, SMS, Location, Camera, Battery optimization, then save and arm."
+                    },
                     color = Color(0xFFFFDEC7),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -304,17 +438,13 @@ private fun HeroCard(enabled: Boolean, runtimeMode: SosMode) {
 @Composable
 private fun PermissionsCard(
     context: Context,
-    onRequestPermissions: () -> Unit,
+    permissionState: PermissionState,
+    callPermissionAction: PermissionAction,
+    smsPermissionAction: PermissionAction,
+    locationPermissionAction: PermissionAction,
+    cameraPermissionAction: PermissionAction,
+    requestNotificationPermission: () -> Unit,
 ) {
-    val accessibilityEnabled = isAccessibilityServiceEnabled(context)
-    val batteryIgnored = isBatteryOptimizationIgnored(context)
-    val callPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-    val smsPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
-    val cameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-    val fineLocationPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    val coarseLocationPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    val locationPermission = fineLocationPermission || coarseLocationPermission
-
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF25121D)),
         shape = RoundedCornerShape(28.dp),
@@ -323,12 +453,67 @@ private fun PermissionsCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Onboarding", color = Color.White, style = MaterialTheme.typography.headlineSmall)
-            PermissionRow("Accessibility trigger service", accessibilityEnabled, Icons.Rounded.Security) {
+            Text("SOS checklist", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                "Complete these steps in order. Each permission unlocks a specific SOS action, so the user always knows what is still missing.",
+                color = Color(0xFFFFE7D6),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            PermissionRow(
+                label = "1. Accessibility trigger service",
+                detail = "Needed to detect the volume-button SOS gesture while the app is in the background.",
+                complete = permissionState.accessibilityEnabled,
+                icon = Icons.Rounded.Security,
+            ) {
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
-            PermissionRow("Call, SMS, location, camera permissions", callPermission && smsPermission && locationPermission && cameraPermission, Icons.Rounded.Call, onRequestPermissions)
-            PermissionRow("Battery optimization exclusion", batteryIgnored, Icons.Rounded.NotificationsActive) {
+            PermissionRow(
+                label = "2. Call permission",
+                detail = "Lets SOS call the first emergency contact automatically.",
+                complete = permissionState.callPermission,
+                icon = Icons.Rounded.PhoneInTalk,
+                buttonLabel = if (permissionState.callPermission) "Review" else callPermissionAction.label,
+                onClick = callPermissionAction.onClick,
+            )
+            PermissionRow(
+                label = "3. SMS permission",
+                detail = "Lets SOS text the location link to every emergency contact.",
+                complete = permissionState.smsPermission,
+                icon = Icons.Rounded.Sms,
+                buttonLabel = if (permissionState.smsPermission) "Review" else smsPermissionAction.label,
+                onClick = smsPermissionAction.onClick,
+            )
+            PermissionRow(
+                label = "4. Location permission",
+                detail = "Lets SOS attach the last known location to the emergency SMS.",
+                complete = permissionState.locationPermission,
+                icon = Icons.Rounded.LocationOn,
+                buttonLabel = if (permissionState.locationPermission) "Review" else locationPermissionAction.label,
+                onClick = locationPermissionAction.onClick,
+            )
+            PermissionRow(
+                label = "5. Camera / flashlight permission",
+                detail = "Lets SOS blink the flashlight to help people find the user.",
+                complete = permissionState.cameraPermission,
+                icon = Icons.Rounded.FlashOn,
+                buttonLabel = if (permissionState.cameraPermission) "Review" else cameraPermissionAction.label,
+                onClick = cameraPermissionAction.onClick,
+            )
+            if (permissionState.notificationsRequired) {
+                PermissionRow(
+                    label = "6. Notification permission",
+                    detail = "Lets Android show ongoing SOS monitoring and active emergency notifications.",
+                    complete = permissionState.notificationPermission,
+                    icon = Icons.Rounded.NotificationsActive,
+                    onClick = requestNotificationPermission,
+                )
+            }
+            PermissionRow(
+                label = if (permissionState.notificationsRequired) "7. Battery optimization exclusion" else "6. Battery optimization exclusion",
+                detail = "Improves reliability so Android is less likely to stop background SOS monitoring.",
+                complete = permissionState.batteryOptimizationIgnored,
+                icon = Icons.Rounded.BatterySaver,
+            ) {
                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                     data = "package:${context.packageName}".toUri()
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -342,8 +527,10 @@ private fun PermissionsCard(
 @Composable
 private fun PermissionRow(
     label: String,
+    detail: String,
     complete: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    buttonLabel: String = if (complete) "Review" else "Open",
     onClick: () -> Unit,
 ) {
     Row(
@@ -360,13 +547,14 @@ private fun PermissionRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = Color.White)
             Spacer(Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(label, color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text(if (complete) "Ready" else "Needs attention", color = Color(0xFFFFE7D6))
+                Text(detail, color = Color(0xFFFFE7D6), style = MaterialTheme.typography.bodySmall)
+                Text(if (complete) "Ready" else "Action needed", color = Color(0xFFFFE7D6))
             }
         }
         OutlinedButton(onClick = onClick) {
-            Text(if (complete) "Review" else "Open")
+            Text(buttonLabel)
         }
     }
 }
@@ -455,5 +643,119 @@ private fun isBatteryOptimizationIgnored(context: Context): Boolean {
         powerManager.isIgnoringBatteryOptimizations(context.packageName)
     } else {
         true
+    }
+}
+
+private data class PermissionState(
+    val accessibilityEnabled: Boolean,
+    val callPermission: Boolean,
+    val smsPermission: Boolean,
+    val locationPermission: Boolean,
+    val cameraPermission: Boolean,
+    val notificationPermission: Boolean,
+    val notificationsRequired: Boolean,
+    val batteryOptimizationIgnored: Boolean,
+)
+
+private data class PermissionAction(
+    val label: String,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun rememberPermissionState(context: Context): PermissionState {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var refreshTick by remember { mutableIntStateOf(0) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshTick++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    refreshTick
+
+    return PermissionState(
+        accessibilityEnabled = isAccessibilityServiceEnabled(context),
+        callPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED,
+        smsPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED,
+        locationPermission =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED,
+        cameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
+        notificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        },
+        notificationsRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+        batteryOptimizationIgnored = isBatteryOptimizationIgnored(context),
+    )
+}
+
+private fun buildRuntimePermissionAction(
+    context: Context,
+    activity: Activity?,
+    permission: String,
+    launchRequest: () -> Unit,
+): PermissionAction {
+    val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    if (granted) {
+        return PermissionAction(label = "Review", onClick = { openAppSettings(context) })
+    }
+
+    val permanentlyDenied = activity?.let {
+        !it.shouldShowRequestPermissionRationale(permission)
+    } == true
+
+    return if (permanentlyDenied) {
+        PermissionAction(label = "Settings", onClick = { openAppSettings(context) })
+    } else {
+        PermissionAction(label = "Allow", onClick = launchRequest)
+    }
+}
+
+private fun buildLocationPermissionAction(
+    context: Context,
+    activity: Activity?,
+    launchRequest: () -> Unit,
+): PermissionAction {
+    val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val coarseGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    if (fineGranted || coarseGranted) {
+        return PermissionAction(label = "Review", onClick = { openAppSettings(context) })
+    }
+
+    val permanentlyDenied = activity?.let {
+        !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
+            !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+    } == true
+
+    return if (permanentlyDenied) {
+        PermissionAction(label = "Settings", onClick = { openAppSettings(context) })
+    } else {
+        PermissionAction(label = "Allow", onClick = launchRequest)
+    }
+}
+
+private fun openAppSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = "package:${context.packageName}".toUri()
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+private tailrec fun Context.findActivity(): Activity? {
+    return when (this) {
+        is Activity -> this
+        is android.content.ContextWrapper -> baseContext.findActivity()
+        else -> null
     }
 }
