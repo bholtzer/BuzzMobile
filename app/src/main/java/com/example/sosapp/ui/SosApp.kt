@@ -59,6 +59,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +94,7 @@ fun SosApp(application: SosApplication) {
     val activity = context.findActivity()
     val snackbarHostState = remember { SnackbarHostState() }
     var permissionFeedback by remember { mutableStateOf<String?>(null) }
+    val requestedPermissions = rememberSaveable { mutableStateListOf<String>() }
 
     val callPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -198,18 +200,30 @@ fun SosApp(application: SosApplication) {
                         context = context,
                         activity = activity,
                         permission = Manifest.permission.CALL_PHONE,
-                        launchRequest = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
+                        wasRequested = requestedPermissions.contains(Manifest.permission.CALL_PHONE),
+                        launchRequest = {
+                            requestedPermissions.markRequested(Manifest.permission.CALL_PHONE)
+                            callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                        },
                     ),
                     smsPermissionAction = buildRuntimePermissionAction(
                         context = context,
                         activity = activity,
                         permission = Manifest.permission.SEND_SMS,
-                        launchRequest = { smsPermissionLauncher.launch(Manifest.permission.SEND_SMS) },
+                        wasRequested = requestedPermissions.contains(Manifest.permission.SEND_SMS),
+                        launchRequest = {
+                            requestedPermissions.markRequested(Manifest.permission.SEND_SMS)
+                            smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
+                        },
                     ),
                     locationPermissionAction = buildLocationPermissionAction(
                         context = context,
                         activity = activity,
+                        fineWasRequested = requestedPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION),
+                        coarseWasRequested = requestedPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION),
                         launchRequest = {
+                            requestedPermissions.markRequested(Manifest.permission.ACCESS_FINE_LOCATION)
+                            requestedPermissions.markRequested(Manifest.permission.ACCESS_COARSE_LOCATION)
                             locationPermissionLauncher.launch(
                                 arrayOf(
                                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -222,7 +236,11 @@ fun SosApp(application: SosApplication) {
                         context = context,
                         activity = activity,
                         permission = Manifest.permission.CAMERA,
-                        launchRequest = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
+                        wasRequested = requestedPermissions.contains(Manifest.permission.CAMERA),
+                        launchRequest = {
+                            requestedPermissions.markRequested(Manifest.permission.CAMERA)
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
                     ),
                     requestNotificationPermission = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -709,6 +727,7 @@ private fun buildRuntimePermissionAction(
     context: Context,
     activity: Activity?,
     permission: String,
+    wasRequested: Boolean,
     launchRequest: () -> Unit,
 ): PermissionAction {
     val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
@@ -717,7 +736,7 @@ private fun buildRuntimePermissionAction(
     }
 
     val permanentlyDenied = activity?.let {
-        !it.shouldShowRequestPermissionRationale(permission)
+        wasRequested && !it.shouldShowRequestPermissionRationale(permission)
     } == true
 
     return if (permanentlyDenied) {
@@ -730,6 +749,8 @@ private fun buildRuntimePermissionAction(
 private fun buildLocationPermissionAction(
     context: Context,
     activity: Activity?,
+    fineWasRequested: Boolean,
+    coarseWasRequested: Boolean,
     launchRequest: () -> Unit,
 ): PermissionAction {
     val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -739,7 +760,8 @@ private fun buildLocationPermissionAction(
     }
 
     val permanentlyDenied = activity?.let {
-        !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
+        (fineWasRequested || coarseWasRequested) &&
+            !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
             !it.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
     } == true
 
@@ -763,5 +785,11 @@ private tailrec fun Context.findActivity(): Activity? {
         is Activity -> this
         is android.content.ContextWrapper -> baseContext.findActivity()
         else -> null
+    }
+}
+
+private fun MutableList<String>.markRequested(permission: String) {
+    if (!contains(permission)) {
+        add(permission)
     }
 }
