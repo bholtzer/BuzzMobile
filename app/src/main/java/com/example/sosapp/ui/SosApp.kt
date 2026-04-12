@@ -542,18 +542,24 @@ private fun PermissionRow(
             )
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Icon(icon, contentDescription = null, tint = Color.White)
-            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, color = Color.White, fontWeight = FontWeight.SemiBold)
                 Text(detail, color = Color(0xFFFFE7D6), style = MaterialTheme.typography.bodySmall)
                 Text(if (complete) "Ready" else "Action needed", color = Color(0xFFFFE7D6))
             }
         }
-        OutlinedButton(onClick = onClick) {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = Modifier.align(Alignment.CenterVertically),
+        ) {
             Text(buttonLabel)
         }
     }
