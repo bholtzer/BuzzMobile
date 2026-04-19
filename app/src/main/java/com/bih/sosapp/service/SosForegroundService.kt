@@ -16,7 +16,7 @@ import com.bih.sosapp.MainActivity
 import com.bih.sosapp.SosApplication
 import com.bih.sosapp.data.SosMode
 import com.bih.sosapp.data.StopReason
-import com.example.sosapp.R
+import  com.bih.sosapp.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -145,10 +145,10 @@ class SosForegroundService : Service() {
     }
 
     companion object {
-        const val ACTION_START_MONITORING = "com.example.sosapp.action.START_MONITORING"
-        const val ACTION_STOP_MONITORING = "com.example.sosapp.action.STOP_MONITORING"
-        const val ACTION_SYNC_NOTIFICATION = "com.example.sosapp.action.SYNC_NOTIFICATION"
-        const val ACTION_STOP_SOS = "com.example.sosapp.action.STOP_SOS"
+        const val ACTION_START_MONITORING = " com.bih.sosapp.action.START_MONITORING"
+        const val ACTION_STOP_MONITORING = " com.bih.sosapp.action.STOP_MONITORING"
+        const val ACTION_SYNC_NOTIFICATION = " com.bih.sosapp.action.SYNC_NOTIFICATION"
+        const val ACTION_STOP_SOS = " com.bih.sosapp.action.STOP_SOS"
         private const val MONITORING_CHANNEL_ID = "sos_monitoring"
         private const val ACTIVE_CHANNEL_ID = "sos_active"
         private const val NOTIFICATION_ID = 1001

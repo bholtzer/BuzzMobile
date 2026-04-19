@@ -1,4 +1,4 @@
-package com.example.sosapp.domain
+package  com.bih.sosapp.domain
 
 import com.bih.sosapp.domain.PhoneNumberValidator
 import org.junit.Assert.assertFalse

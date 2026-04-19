@@ -1,4 +1,4 @@
-package com.example.sosapp.domain
+package  com.bih.sosapp.domain
 
 import android.view.KeyEvent
 import com.bih.sosapp.data.SosSettings
