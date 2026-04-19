@@ -29,11 +29,15 @@ class FlashBlinkController(
         if (blinkJob?.isActive == true) return
 
         blinkJob = scope.launch(Dispatchers.IO) {
-            while (true) {
-                cameraManager.setTorchMode(safeCameraId, true)
-                delay(blinkMs)
-                cameraManager.setTorchMode(safeCameraId, false)
-                delay(blinkMs)
+            try {
+                while (true) {
+                    runCatching { cameraManager.setTorchMode(safeCameraId, true) }
+                    delay(blinkMs)
+                    runCatching { cameraManager.setTorchMode(safeCameraId, false) }
+                    delay(blinkMs)
+                }
+            } finally {
+                runCatching { cameraManager.setTorchMode(safeCameraId, false) }
             }
         }
     }
