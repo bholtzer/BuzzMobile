@@ -2,7 +2,10 @@ package com.example.sosapp.domain
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.example.sosapp.MainActivity
 import com.example.sosapp.data.CallStatus
 import com.example.sosapp.data.LocationShareStatus
@@ -27,6 +30,7 @@ class SosCoordinator(
     private val flashBlinkController: FlashBlinkController,
     private val callHandler: CallHandler,
     private val locationShareHandler: LocationShareHandler,
+    private val cameraHandler: CameraHandler,
     private val appScope: CoroutineScope,
 ) {
     private val _runtimeState = MutableStateFlow(SosRuntimeState())
@@ -52,11 +56,17 @@ class SosCoordinator(
         )
         appScope.launch {
             runCatching { sirenPlayer.start(settings.sirenVolumeFraction) }
+            
+            // Capture photo first while flash is off to avoid CAMERA_IN_USE conflict
+            val photoFile = cameraHandler.capturePhoto()
+            
             if (flashBlinkController.hasFlash()) {
                 flashBlinkController.start(appScope, settings.flashBlinkMs)
             }
+            
             val contacts = PhoneNumberValidator.parseContacts(settings.emergencyNumber)
             val primaryContact = contacts.firstOrNull().orEmpty()
+            
             val callStatus = if (settings.testMode) {
                 CallStatus.SKIPPED_TEST_MODE
             } else if (primaryContact.isBlank()) {
@@ -64,11 +74,17 @@ class SosCoordinator(
             } else {
                 callHandler.placeDirectCall(primaryContact)
             }
+            
             val locationShareStatus = if (settings.testMode) {
                 LocationShareStatus.SKIPPED_TEST_MODE
             } else {
                 locationShareHandler.sendLocationMessage(settings.emergencyNumber)
             }
+            
+            if (!settings.testMode && photoFile != null && settings.whatsappNumber.isNotBlank()) {
+                sendWhatsAppAlert(settings.whatsappNumber, photoFile)
+            }
+            
             _runtimeState.value = SosRuntimeState(
                 mode = SosMode.SOS_ACTIVE,
                 sirenActive = true,
@@ -80,6 +96,46 @@ class SosCoordinator(
             )
             startForegroundService()
             launchMainActivity()
+        }
+    }
+
+    private fun sendWhatsAppAlert(whatsappNumber: String, photoFile: java.io.File) {
+        if (!isAppInstalled("com.whatsapp")) return
+
+        val lastLoc = locationShareHandler.getBestLastKnownLocation()
+        val message = buildString {
+            append("SOS EMERGENCY ALERT! I need help immediately. ")
+            if (lastLoc != null) {
+                append("\nMy location: https://maps.google.com/?q=${lastLoc.latitude},${lastLoc.longitude}")
+            }
+        }
+        
+        val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+        val cleanNumber = whatsappNumber.filter { it.isDigit() }
+        
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/jpeg"
+            putExtra(Intent.EXTRA_STREAM, contentUri)
+            putExtra(Intent.EXTRA_TEXT, message)
+            setPackage("com.whatsapp")
+            putExtra("jid", "$cleanNumber@s.whatsapp.net")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback
+        }
+    }
+
+    private fun isAppInstalled(packageName: String): Boolean {
+        return try {
+            context.packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
         }
     }
 

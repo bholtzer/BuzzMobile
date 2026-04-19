@@ -43,7 +43,7 @@ class LocationShareHandler(
         }
     }
 
-    private fun getBestLastKnownLocation(): Location? {
+    fun getBestLastKnownLocation(): Location? {
         val providers = listOf(
             LocationManager.GPS_PROVIDER,
             LocationManager.NETWORK_PROVIDER,

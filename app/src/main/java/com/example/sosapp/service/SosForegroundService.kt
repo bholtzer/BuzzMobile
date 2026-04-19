@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -35,7 +36,7 @@ class SosForegroundService : Service() {
         createChannels()
         serviceScope.launch {
             appContainer.sosCoordinator.runtimeState.collectLatest {
-                startForeground(NOTIFICATION_ID, buildNotification())
+                safeStartForeground(buildNotification())
                 if (!appContainer.settingsStore.settings.value.enabled && it.mode == SosMode.IDLE) {
                     stopSelf()
                 }
@@ -54,10 +55,22 @@ class SosForegroundService : Service() {
                 }
             }
             ACTION_SYNC_NOTIFICATION, ACTION_START_MONITORING, null -> {
-                startForeground(NOTIFICATION_ID, buildNotification())
+                safeStartForeground(buildNotification())
             }
         }
         return START_STICKY
+    }
+
+    private fun safeStartForeground(notification: Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL,
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     override fun onDestroy() {

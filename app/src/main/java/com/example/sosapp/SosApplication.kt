@@ -3,6 +3,7 @@ package com.example.sosapp
 import android.app.Application
 import com.example.sosapp.data.SosSettingsStore
 import com.example.sosapp.domain.CallHandler
+import com.example.sosapp.domain.CameraHandler
 import com.example.sosapp.domain.FlashBlinkController
 import com.example.sosapp.domain.LocationShareHandler
 import com.example.sosapp.domain.SirenPlayer
@@ -24,6 +25,7 @@ class SosApplication : Application() {
             flashBlinkController = FlashBlinkController(this),
             callHandler = CallHandler(this),
             locationShareHandler = LocationShareHandler(this),
+            cameraHandler = CameraHandler(this),
             appScope = appScope,
         )
     }
@@ -35,6 +37,7 @@ class AppContainer(
     flashBlinkController: FlashBlinkController,
     callHandler: CallHandler,
     locationShareHandler: LocationShareHandler,
+    val cameraHandler: CameraHandler,
     appScope: CoroutineScope,
 ) {
     val sosCoordinator = SosCoordinator(
@@ -44,6 +47,7 @@ class AppContainer(
         flashBlinkController = flashBlinkController,
         callHandler = callHandler,
         locationShareHandler = locationShareHandler,
+        cameraHandler = cameraHandler,
         appScope = appScope,
     )
 }

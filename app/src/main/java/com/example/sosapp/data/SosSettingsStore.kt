@@ -22,8 +22,10 @@ class SosSettingsStore(
 ) {
     private object Keys {
         val emergencyNumber = stringPreferencesKey("emergency_number")
+        val whatsappNumber = stringPreferencesKey("whatsapp_number")
         val enabled = booleanPreferencesKey("enabled")
         val sirenVolumeFraction = floatPreferencesKey("siren_volume_fraction")
+        val triggerType = stringPreferencesKey("trigger_type")
         val triggerHoldMs = longPreferencesKey("trigger_hold_ms")
         val chordWindowMs = longPreferencesKey("chord_window_ms")
         val flashBlinkMs = longPreferencesKey("flash_blink_ms")
@@ -43,8 +45,10 @@ class SosSettingsStore(
         context.dataStore.edit { prefs ->
             val updated = transform(mapPreferences(prefs))
             prefs[Keys.emergencyNumber] = updated.emergencyNumber
+            prefs[Keys.whatsappNumber] = updated.whatsappNumber
             prefs[Keys.enabled] = updated.enabled
             prefs[Keys.sirenVolumeFraction] = updated.sirenVolumeFraction
+            prefs[Keys.triggerType] = updated.triggerType.name
             prefs[Keys.triggerHoldMs] = updated.triggerHoldMs
             prefs[Keys.chordWindowMs] = updated.chordWindowMs
             prefs[Keys.flashBlinkMs] = updated.flashBlinkMs
@@ -56,8 +60,14 @@ class SosSettingsStore(
     private fun mapPreferences(preferences: Preferences): SosSettings {
         return SosSettings(
             emergencyNumber = preferences[Keys.emergencyNumber].orEmpty(),
+            whatsappNumber = preferences[Keys.whatsappNumber].orEmpty(),
             enabled = preferences[Keys.enabled] ?: false,
             sirenVolumeFraction = preferences[Keys.sirenVolumeFraction] ?: 1f,
+            triggerType = try {
+                TriggerType.valueOf(preferences[Keys.triggerType] ?: TriggerType.VOLUME_CHORD.name)
+            } catch (e: Exception) {
+                TriggerType.VOLUME_CHORD
+            },
             triggerHoldMs = preferences[Keys.triggerHoldMs] ?: 1500L,
             chordWindowMs = preferences[Keys.chordWindowMs] ?: 600L,
             flashBlinkMs = preferences[Keys.flashBlinkMs] ?: 350L,
