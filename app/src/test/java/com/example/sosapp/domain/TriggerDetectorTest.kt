@@ -1,7 +1,8 @@
 package com.example.sosapp.domain
 
 import android.view.KeyEvent
-import com.example.sosapp.data.SosSettings
+import com.bih.sosapp.data.SosSettings
+import com.bih.sosapp.domain.TriggerDetector
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

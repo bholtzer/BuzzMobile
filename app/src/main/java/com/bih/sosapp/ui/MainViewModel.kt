@@ -1,15 +1,15 @@
-package com.example.sosapp.ui
+package com.bih.sosapp.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.sosapp.SosApplication
-import com.example.sosapp.data.SosRuntimeState
-import com.example.sosapp.data.SosSettings
-import com.example.sosapp.data.StopReason
-import com.example.sosapp.data.TriggerSource
-import com.example.sosapp.domain.PhoneNumberValidator
-import com.example.sosapp.service.SosForegroundService
+import com.bih.sosapp.SosApplication
+import com.bih.sosapp.data.SosRuntimeState
+import com.bih.sosapp.data.SosSettings
+import com.bih.sosapp.data.StopReason
+import com.bih.sosapp.data.TriggerSource
+import com.bih.sosapp.domain.PhoneNumberValidator
+import com.bih.sosapp.service.SosForegroundService
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -28,9 +28,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             appContainer.settingsStore.updateSettings { settings }
             appContainer.sosCoordinator.setArmed(settings.enabled)
             if (settings.enabled) {
-                SosForegroundService.start(getApplication())
+                SosForegroundService.Companion.start(getApplication())
             } else {
-                SosForegroundService.stop(getApplication())
+                SosForegroundService.Companion.stop(getApplication())
             }
         }
     }
@@ -45,9 +45,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             appContainer.settingsStore.updateSettings { it.copy(enabled = enabled) }
             appContainer.sosCoordinator.setArmed(enabled)
             if (enabled) {
-                SosForegroundService.start(getApplication())
+                SosForegroundService.Companion.start(getApplication())
             } else {
-                SosForegroundService.stop(getApplication())
+                SosForegroundService.Companion.stop(getApplication())
             }
         }
     }

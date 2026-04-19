@@ -1,20 +1,19 @@
-package com.example.sosapp.domain
+package com.bih.sosapp.domain
 
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.example.sosapp.MainActivity
-import com.example.sosapp.data.CallStatus
-import com.example.sosapp.data.LocationShareStatus
-import com.example.sosapp.data.SosMode
-import com.example.sosapp.data.SosRuntimeState
-import com.example.sosapp.data.SosSettingsStore
-import com.example.sosapp.data.StopReason
-import com.example.sosapp.data.TriggerSource
-import com.example.sosapp.service.SosForegroundService
+import com.bih.sosapp.MainActivity
+import com.bih.sosapp.data.CallStatus
+import com.bih.sosapp.data.LocationShareStatus
+import com.bih.sosapp.data.SosMode
+import com.bih.sosapp.data.SosRuntimeState
+import com.bih.sosapp.data.SosSettingsStore
+import com.bih.sosapp.data.StopReason
+import com.bih.sosapp.data.TriggerSource
+import com.bih.sosapp.service.SosForegroundService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 
 class SosCoordinator(
     private val context: Context,
@@ -99,7 +99,7 @@ class SosCoordinator(
         }
     }
 
-    private fun sendWhatsAppAlert(whatsappNumber: String, photoFile: java.io.File) {
+    private fun sendWhatsAppAlert(whatsappNumber: String, photoFile: File) {
         if (!isAppInstalled("com.whatsapp")) return
 
         val lastLoc = locationShareHandler.getBestLastKnownLocation()
@@ -110,7 +110,7 @@ class SosCoordinator(
             }
         }
         
-        val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+        val contentUri = FileProvider.getUriForFile(context, "${context.packageName}. ;fileprovider", photoFile)
         val cleanNumber = whatsappNumber.filter { it.isDigit() }
         
         val intent = Intent(Intent.ACTION_SEND).apply {
@@ -163,13 +163,13 @@ class SosCoordinator(
 
     private fun startForegroundService() {
         val intent = Intent(context, SosForegroundService::class.java).apply {
-            action = SosForegroundService.ACTION_SYNC_NOTIFICATION
+            action = SosForegroundService.Companion.ACTION_SYNC_NOTIFICATION
         }
         ContextCompat.startForegroundService(context, intent)
     }
 
     private fun launchMainActivity() {
-        val intent = MainActivity.createLaunchIntent(context).apply {
+        val intent = MainActivity.Companion.createLaunchIntent(context).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
         context.startActivity(intent)

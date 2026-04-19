@@ -1,4 +1,4 @@
-package com.example.sosapp.domain
+package com.bih.sosapp.domain
 
 import android.content.Context
 import android.media.AudioAttributes

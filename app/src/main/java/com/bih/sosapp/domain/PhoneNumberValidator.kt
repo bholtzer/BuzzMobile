@@ -1,4 +1,4 @@
-package com.example.sosapp.domain
+package com.bih.sosapp.domain
 
 object PhoneNumberValidator {
     private val allowedPattern = Regex("^[0-9+()\\-\\s]{3,20}$")

@@ -1,4 +1,4 @@
-package com.example.sosapp.ui.theme
+package com.bih.sosapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

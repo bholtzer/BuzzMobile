@@ -1,12 +1,12 @@
-package com.example.sosapp.service
+package com.bih.sosapp.service
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
-import com.example.sosapp.SosApplication
-import com.example.sosapp.data.TriggerSource
-import com.example.sosapp.domain.TriggerDetector
+import com.bih.sosapp.SosApplication
+import com.bih.sosapp.data.TriggerSource
+import com.bih.sosapp.domain.TriggerDetector
 
 class SosAccessibilityService : AccessibilityService() {
     private val detector = TriggerDetector()

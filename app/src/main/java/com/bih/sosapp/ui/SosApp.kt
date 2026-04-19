@@ -1,4 +1,4 @@
-package com.example.sosapp.ui
+package com.bih.sosapp.ui
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -7,7 +7,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -17,7 +16,6 @@ import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -86,6 +84,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -94,11 +93,11 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.sosapp.SosApplication
-import com.example.sosapp.data.SosMode
-import com.example.sosapp.data.SosSettings
-import com.example.sosapp.data.TriggerType
-import com.example.sosapp.domain.PhoneNumberValidator
+import com.bih.sosapp.SosApplication
+import com.bih.sosapp.data.SosMode
+import com.bih.sosapp.data.SosSettings
+import com.bih.sosapp.data.TriggerType
+import com.bih.sosapp.domain.PhoneNumberValidator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -629,7 +628,7 @@ private fun PermissionsCard(
 private fun PermissionRow(
     label: String,
     complete: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     description: String,
     onClick: () -> Unit,
 ) {

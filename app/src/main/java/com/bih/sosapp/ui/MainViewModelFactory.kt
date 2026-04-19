@@ -1,4 +1,4 @@
-package com.example.sosapp.ui
+package com.bih.sosapp.ui
 
 import android.app.Application
 import androidx.lifecycle.ViewModel

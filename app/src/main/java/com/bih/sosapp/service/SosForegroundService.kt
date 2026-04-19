@@ -1,4 +1,4 @@
-package com.example.sosapp.service
+package com.bih.sosapp.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,11 +12,11 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.example.sosapp.MainActivity
+import com.bih.sosapp.MainActivity
+import com.bih.sosapp.SosApplication
+import com.bih.sosapp.data.SosMode
+import com.bih.sosapp.data.StopReason
 import com.example.sosapp.R
-import com.example.sosapp.SosApplication
-import com.example.sosapp.data.SosMode
-import com.example.sosapp.data.StopReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,7 +28,7 @@ class SosForegroundService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val appContainer by lazy { (application as SosApplication).appContainer }
     private val notificationManager by lazy {
-        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
 
     override fun onCreate() {
@@ -85,7 +85,7 @@ class SosForegroundService : Service() {
         val mainIntent = PendingIntent.getActivity(
             this,
             1,
-            MainActivity.createLaunchIntent(this),
+            MainActivity.Companion.createLaunchIntent(this),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val stopIntent = PendingIntent.getService(

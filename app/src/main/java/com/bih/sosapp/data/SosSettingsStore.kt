@@ -1,4 +1,4 @@
-package com.example.sosapp.data
+package com.bih.sosapp.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences

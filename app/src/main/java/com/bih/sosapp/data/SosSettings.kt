@@ -1,4 +1,4 @@
-package com.example.sosapp.data
+package com.bih.sosapp.data
 
 enum class TriggerType {
     VOLUME_CHORD,

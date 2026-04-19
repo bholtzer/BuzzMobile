@@ -1,4 +1,4 @@
-package com.example.sosapp.domain
+package com.bih.sosapp.domain
 
 import android.Manifest
 import android.content.ActivityNotFoundException
@@ -7,7 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.content.ContextCompat
-import com.example.sosapp.data.CallStatus
+import com.bih.sosapp.data.CallStatus
 
 class CallHandler(
     private val context: Context,

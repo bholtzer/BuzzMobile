@@ -1,9 +1,9 @@
-package com.example.sosapp.domain
+package com.bih.sosapp.domain
 
 import android.util.Log
 import android.view.KeyEvent
-import com.example.sosapp.data.SosSettings
-import com.example.sosapp.data.TriggerType
+import com.bih.sosapp.data.SosSettings
+import com.bih.sosapp.data.TriggerType
 
 class TriggerDetector {
     private var upDownAt: Long? = null

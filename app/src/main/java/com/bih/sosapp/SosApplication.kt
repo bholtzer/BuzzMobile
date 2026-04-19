@@ -1,13 +1,13 @@
-package com.example.sosapp
+package com.bih.sosapp
 
 import android.app.Application
-import com.example.sosapp.data.SosSettingsStore
-import com.example.sosapp.domain.CallHandler
-import com.example.sosapp.domain.CameraHandler
-import com.example.sosapp.domain.FlashBlinkController
-import com.example.sosapp.domain.LocationShareHandler
-import com.example.sosapp.domain.SirenPlayer
-import com.example.sosapp.domain.SosCoordinator
+import com.bih.sosapp.data.SosSettingsStore
+import com.bih.sosapp.domain.CallHandler
+import com.bih.sosapp.domain.CameraHandler
+import com.bih.sosapp.domain.FlashBlinkController
+import com.bih.sosapp.domain.LocationShareHandler
+import com.bih.sosapp.domain.SirenPlayer
+import com.bih.sosapp.domain.SosCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

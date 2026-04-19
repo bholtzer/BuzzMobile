@@ -1,12 +1,12 @@
-package com.example.sosapp.domain
+package com.bih.sosapp.domain
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CaptureRequest
 import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
@@ -24,8 +24,8 @@ class CameraHandler(private val context: Context) {
         val cameraId = try {
             cameraManager.cameraIdList.firstOrNull { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)
-                val lensFacing = characteristics.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)
-                lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+                val lensFacing = characteristics.get(CameraCharacteristics.LENS_FACING)
+                lensFacing == CameraCharacteristics.LENS_FACING_BACK
             }
         } catch (e: Exception) {
             null
