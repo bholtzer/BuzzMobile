@@ -1,6 +1,7 @@
 package com.example.sosapp.domain
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
@@ -43,6 +44,7 @@ class LocationShareHandler(
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun getBestLastKnownLocation(): Location? {
         val providers = listOf(
             LocationManager.GPS_PROVIDER,
