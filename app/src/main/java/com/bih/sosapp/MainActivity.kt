@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setShowWhenLocked(true)
         setTurnScreenOn(true)
+
         setContent {
             SosGuardianTheme {
                 SosApp(application = application as SosApplication)
