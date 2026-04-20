@@ -1,13 +1,14 @@
-package com.example.sosapp.domain
+package com.bih.sosguardian.domain
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
-import com.example.sosapp.data.LocationShareStatus
+import com.bih.sosguardian.data.LocationShareStatus
 
 class LocationShareHandler(
     private val context: Context,
@@ -43,7 +44,8 @@ class LocationShareHandler(
         }
     }
 
-    private fun getBestLastKnownLocation(): Location? {
+    @SuppressLint("MissingPermission")
+    fun getBestLastKnownLocation(): Location? {
         val providers = listOf(
             LocationManager.GPS_PROVIDER,
             LocationManager.NETWORK_PROVIDER,

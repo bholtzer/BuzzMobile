@@ -1,4 +1,4 @@
-package com.example.sosapp.service
+package com.bih.sosguardian.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -7,15 +7,16 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.example.sosapp.MainActivity
-import com.example.sosapp.R
-import com.example.sosapp.SosApplication
-import com.example.sosapp.data.SosMode
-import com.example.sosapp.data.StopReason
+import com.bih.sosguardian.MainActivity
+import com.bih.sosguardian.SosApplication
+import com.bih.sosguardian.data.SosMode
+import com.bih.sosguardian.data.StopReason
+import  com.bih.sosguardian.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,7 +28,7 @@ class SosForegroundService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val appContainer by lazy { (application as SosApplication).appContainer }
     private val notificationManager by lazy {
-        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
 
     override fun onCreate() {
@@ -35,7 +36,7 @@ class SosForegroundService : Service() {
         createChannels()
         serviceScope.launch {
             appContainer.sosCoordinator.runtimeState.collectLatest {
-                startForeground(NOTIFICATION_ID, buildNotification())
+                safeStartForeground(buildNotification())
                 if (!appContainer.settingsStore.settings.value.enabled && it.mode == SosMode.IDLE) {
                     stopSelf()
                 }
@@ -54,10 +55,28 @@ class SosForegroundService : Service() {
                 }
             }
             ACTION_SYNC_NOTIFICATION, ACTION_START_MONITORING, null -> {
-                startForeground(NOTIFICATION_ID, buildNotification())
+                safeStartForeground(buildNotification())
             }
         }
         return START_STICKY
+    }
+
+    private fun safeStartForeground(notification: Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Use NONE or a general type for older versions if specialUse is not needed
+            // But since we want to be consistent, we can just use 0 (default) or the specific types.
+            // On Q-T, phoneCall might have been okay, but let's use 0 to avoid restrictive requirements
+            // unless we really need a specific type.
+            startForeground(NOTIFICATION_ID, notification)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     override fun onDestroy() {
@@ -72,7 +91,7 @@ class SosForegroundService : Service() {
         val mainIntent = PendingIntent.getActivity(
             this,
             1,
-            MainActivity.createLaunchIntent(this),
+            MainActivity.Companion.createLaunchIntent(this),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val stopIntent = PendingIntent.getService(
@@ -132,10 +151,10 @@ class SosForegroundService : Service() {
     }
 
     companion object {
-        const val ACTION_START_MONITORING = "com.example.sosapp.action.START_MONITORING"
-        const val ACTION_STOP_MONITORING = "com.example.sosapp.action.STOP_MONITORING"
-        const val ACTION_SYNC_NOTIFICATION = "com.example.sosapp.action.SYNC_NOTIFICATION"
-        const val ACTION_STOP_SOS = "com.example.sosapp.action.STOP_SOS"
+        const val ACTION_START_MONITORING = " com.bih.sosguardian.action.START_MONITORING"
+        const val ACTION_STOP_MONITORING = " com.bih.sosguardian.action.STOP_MONITORING"
+        const val ACTION_SYNC_NOTIFICATION = " com.bih.sosguardian.action.SYNC_NOTIFICATION"
+        const val ACTION_STOP_SOS = " com.bih.sosguardian.action.STOP_SOS"
         private const val MONITORING_CHANNEL_ID = "sos_monitoring"
         private const val ACTIVE_CHANNEL_ID = "sos_active"
         private const val NOTIFICATION_ID = 1001

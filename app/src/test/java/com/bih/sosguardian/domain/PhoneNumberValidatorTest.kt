@@ -1,4 +1,4 @@
-package com.example.sosapp.domain
+package com.bih.sosguardian.domain
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

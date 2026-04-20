@@ -1,9 +1,17 @@
-package com.example.sosapp.data
+package com.bih.sosguardian.data
+
+enum class TriggerType {
+    VOLUME_CHORD,
+    VOL_UP_LONG_PRESS,
+    VOL_DOWN_LONG_PRESS,
+}
 
 data class SosSettings(
     val emergencyNumber: String = "",
+    val whatsappNumber: String = "",
     val enabled: Boolean = false,
     val sirenVolumeFraction: Float = 1f,
+    val triggerType: TriggerType = TriggerType.VOLUME_CHORD,
     val triggerHoldMs: Long = 1500L,
     val chordWindowMs: Long = 600L,
     val flashBlinkMs: Long = 350L,
