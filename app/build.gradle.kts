@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = " com.bih.sosapp"
+    namespace = "com.bih.sosapp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = " com.bih.sosapp"
+        applicationId = "com.bih.sosapp"
         minSdk = 28
         targetSdk = 35
         versionCode = 1
