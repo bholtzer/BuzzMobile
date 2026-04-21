@@ -3,6 +3,9 @@ package com.bih.sosguardian.domain
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.telephony.TelephonyManager
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.bih.sosguardian.MainActivity
@@ -57,7 +60,7 @@ class SosCoordinator(
         appScope.launch {
             runCatching { sirenPlayer.start(settings.sirenVolumeFraction) }
             
-            // Capture photo first while flash is off to avoid CAMERA_IN_USE conflict
+            // Capture photo first
             val photoFile = cameraHandler.capturePhoto()
             
             if (flashBlinkController.hasFlash()) {
@@ -81,10 +84,6 @@ class SosCoordinator(
                 locationShareHandler.sendLocationMessage(settings.emergencyNumber)
             }
             
-            if (!settings.testMode && photoFile != null && settings.whatsappNumber.isNotBlank()) {
-                sendWhatsAppAlert(settings.whatsappNumber, photoFile)
-            }
-            
             _runtimeState.value = SosRuntimeState(
                 mode = SosMode.SOS_ACTIVE,
                 sirenActive = true,
@@ -95,12 +94,25 @@ class SosCoordinator(
                 message = buildStatusMessage(callStatus, locationShareStatus),
             )
             startForegroundService()
+            
+            // Launch main activity
             launchMainActivity()
+            
+            // SNAPPIER FLOW: Reduced delay to 300ms
+            delay(300)
+            
+            if (!settings.testMode && settings.whatsappNumber.isNotBlank()) {
+                sendWhatsAppAlert(settings.whatsappNumber, photoFile)
+            }
         }
     }
 
-    private fun sendWhatsAppAlert(whatsappNumber: String, photoFile: File) {
-        if (!isAppInstalled("com.whatsapp")) return
+    private fun sendWhatsAppAlert(whatsappNumber: String, photoFile: File?) {
+        val pkg = when {
+            isAppInstalled("com.whatsapp") -> "com.whatsapp"
+            isAppInstalled("com.whatsapp.w4b") -> "com.whatsapp.w4b"
+            else -> return
+        }
 
         val lastLoc = locationShareHandler.getBestLastKnownLocation()
         val message = buildString {
@@ -110,23 +122,43 @@ class SosCoordinator(
             }
         }
         
-        val contentUri = FileProvider.getUriForFile(context, "${context.packageName}. ;fileprovider", photoFile)
-        val cleanNumber = whatsappNumber.filter { it.isDigit() }
-        
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "image/jpeg"
-            putExtra(Intent.EXTRA_STREAM, contentUri)
-            putExtra(Intent.EXTRA_TEXT, message)
-            setPackage("com.whatsapp")
-            putExtra("jid", "$cleanNumber@s.whatsapp.net")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        var digits = whatsappNumber.filter { it.isDigit() }
+        if (digits.startsWith("0") && digits.length == 10) {
+            digits = "972" + digits.substring(1)
+        } else if (digits.length == 9 && digits.startsWith("5")) {
+            digits = "972" + digits
+        } else if (digits.length == 10 && !digits.startsWith("972")) {
+            digits = "972" + digits
         }
+        
+        val jid = "$digits@s.whatsapp.net"
+
+        val intent = if (photoFile != null) {
+            val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+            Intent(Intent.ACTION_SEND).apply {
+                type = "image/jpeg"
+                putExtra(Intent.EXTRA_STREAM, contentUri)
+                putExtra(Intent.EXTRA_TEXT, message)
+                putExtra("jid", jid)
+                putExtra("com.whatsapp.EXTRA_JID", jid)
+                putExtra("com.whatsapp.contact.ID", jid)
+                putExtra("address", digits)
+                setPackage(pkg)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        } else {
+            val uri = Uri.parse("https://wa.me/$digits?text=${Uri.encode(message)}")
+            Intent(Intent.ACTION_VIEW, uri).apply {
+                setPackage(pkg)
+            }
+        }
+        
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            // Fallback
+            Log.e("SosCoordinator", "Failed to launch WhatsApp", e)
         }
     }
 
@@ -134,7 +166,7 @@ class SosCoordinator(
         return try {
             context.packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
             true
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (e: Exception) {
             false
         }
     }

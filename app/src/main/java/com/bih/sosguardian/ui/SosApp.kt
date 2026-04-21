@@ -233,6 +233,10 @@ private fun SetupScreen(
     val scrollState = rememberScrollState()
     val numberValid = PhoneNumberValidator.isValid(draftNumber)
 
+    val isWhatsappInstalled = remember { 
+        isAppInstalled(context, "com.whatsapp") || isAppInstalled(context, "com.whatsapp.w4b") 
+    }
+
     val pickPhoneContract = remember {
         object : ActivityResultContract<Void?, Uri?>() {
             override fun createIntent(context: Context, input: Void?): Intent =
@@ -242,10 +246,23 @@ private fun SetupScreen(
         }
     }
 
+    val pickWhatsappContract = remember {
+        object : ActivityResultContract<Void?, Uri?>() {
+            override fun createIntent(context: Context, input: Void?): Intent {
+                val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+                // Filter for WhatsApp contacts if possible, though standard picker might not support direct filtering well.
+                // We'll rely on the user choosing a WhatsApp-enabled contact.
+                return intent
+            }
+            override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
+                if (resultCode == Activity.RESULT_OK) intent?.data else null
+        }
+    }
+
     val emergencyPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
         uri?.let { draftNumber = pickContactPhone(context, it) ?: draftNumber }
     }
-    val whatsappPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
+    val whatsappPicker = rememberLauncherForActivityResult(pickWhatsappContract) { uri ->
         uri?.let { draftWhatsappNumber = pickContactPhone(context, it) ?: draftWhatsappNumber }
     }
 
@@ -309,22 +326,24 @@ private fun SetupScreen(
                     isError = !numberValid && draftNumber.isNotBlank(),
                 )
 
-                OutlinedTextField(
-                    value = draftWhatsappNumber,
-                    onValueChange = { draftWhatsappNumber = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("WhatsApp Emergency Contact") },
-                    trailingIcon = {
-                        IconButton(onClick = { whatsappPicker.launch(null) }) {
-                            Icon(Icons.Rounded.ContactPage, contentDescription = "Pick contact")
-                        }
-                    },
-                    supportingText = {
-                        Text("This contact will receive the photo and location alert via WhatsApp.")
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    singleLine = true,
-                )
+                if (isWhatsappInstalled) {
+                    OutlinedTextField(
+                        value = draftWhatsappNumber,
+                        onValueChange = { draftWhatsappNumber = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("WhatsApp Emergency Contact") },
+                        trailingIcon = {
+                            IconButton(onClick = { whatsappPicker.launch(null) }) {
+                                Icon(Icons.Rounded.ContactPage, contentDescription = "Pick contact")
+                            }
+                        },
+                        supportingText = {
+                            Text("This contact will receive the photo and location alert via WhatsApp.")
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                    )
+                }
 
                 var expanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
@@ -462,6 +481,15 @@ private fun pickContactPhone(context: Context, contactUri: Uri): String? {
         }
     }
     return phone
+}
+
+private fun isAppInstalled(context: Context, packageName: String): Boolean {
+    return try {
+        context.packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+        true
+    } catch (e: Exception) {
+        false
+    }
 }
 
 @Composable
