@@ -8,12 +8,16 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.bih.sosguardian.SosApplication
 import com.bih.sosguardian.data.TriggerSource
 import com.bih.sosguardian.domain.TriggerDetector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class SosAccessibilityService : AccessibilityService() {
     private val detector = TriggerDetector()
+    private val serviceScope = CoroutineScope(Dispatchers.Main)
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        // Automatically click the send button in WhatsApp during an SOS event
         val appContainer = (application as SosApplication).appContainer
         val runtimeState = appContainer.sosCoordinator.runtimeState.value
         
@@ -22,10 +26,7 @@ class SosAccessibilityService : AccessibilityService() {
             
             val packageName = event.packageName?.toString()
             if (packageName == "com.whatsapp" || packageName == "com.whatsapp.w4b") {
-                if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
-                    event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-                    findAndClickSendButton(rootInActiveWindow)
-                }
+                findAndClickSendButton(rootInActiveWindow)
             }
         }
     }
@@ -33,38 +34,49 @@ class SosAccessibilityService : AccessibilityService() {
     private fun findAndClickSendButton(node: AccessibilityNodeInfo?) {
         if (node == null) return
         
-        // WhatsApp's send button usually has a content description like "Send"
-        // In Hebrew, it might be "שליחה" or similar. We check common IDs and descriptions.
         val sendButtonIds = listOf(
             "com.whatsapp:id/send",
-            "com.whatsapp.w4b:id/send"
+            "com.whatsapp.w4b:id/send",
+            "com.whatsapp:id/confirm_button",
+            "com.whatsapp.w4b:id/confirm_button",
+            "com.whatsapp:id/done",
+            "com.whatsapp.w4b:id/done"
         )
         
         for (id in sendButtonIds) {
             val nodes = node.findAccessibilityNodeInfosByViewId(id)
             for (sendNode in nodes) {
-                if (sendNode.isEnabled && sendNode.isClickable) {
-                    sendNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    return
+                if (sendNode.isClickable && sendNode.isEnabled) {
+                    if (sendNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                        autoReturn()
+                        return
+                    }
                 }
             }
         }
 
-        // Fallback to searching by content description if ID fails
-        val descriptions = listOf("Send", "שליחה")
+        val descriptions = listOf("Send", "שליחה", "שלח")
         for (desc in descriptions) {
             val nodes = node.findAccessibilityNodeInfosByText(desc)
             for (sendNode in nodes) {
                 if (sendNode.isClickable && sendNode.isEnabled) {
-                    sendNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    return
+                    if (sendNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                        autoReturn()
+                        return
+                    }
                 }
             }
         }
 
-        // Recursive search
         for (i in 0 until node.childCount) {
             findAndClickSendButton(node.getChild(i))
+        }
+    }
+
+    private fun autoReturn() {
+        serviceScope.launch {
+            delay(800)
+            performGlobalAction(GLOBAL_ACTION_BACK)
         }
     }
 

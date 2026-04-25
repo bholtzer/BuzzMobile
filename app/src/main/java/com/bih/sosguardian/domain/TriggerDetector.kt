@@ -24,7 +24,9 @@ class TriggerDetector {
         onTrigger: () -> Unit
     ): Boolean {
         // If not enabled or in cooldown, don't interfere with volume keys
-        if (!settings.enabled || now < cooldownUntil) {
+        // Removed now < cooldownUntil check to allow re-trigger if needed, 
+        // though triggerLatched still prevents spam.
+        if (!settings.enabled) {
             return false
         }
 
@@ -50,20 +52,15 @@ class TriggerDetector {
         // Reset latch when buttons are released
         if (action == KeyEvent.ACTION_UP) {
             if (settings.triggerType == TriggerType.VOLUME_CHORD) {
+                // For chord, reset if either button is released to allow fresh trigger
                 if (!upHeld || !downHeld) triggerLatched = false
             } else {
                 triggerLatched = false
             }
         }
 
-        // Decide whether to consume the event.
-        // For Chord: Consume if both are held to avoid volume UI popping up during SOS hold.
-        // For Long Press: Consume if the specific button is held.
-        return when (settings.triggerType) {
-            TriggerType.VOLUME_CHORD -> upHeld || downHeld
-            TriggerType.VOL_UP_LONG_PRESS -> upHeld
-            TriggerType.VOL_DOWN_LONG_PRESS -> downHeld
-        }
+        // Consume events to prevent volume UI and beeping
+        return true
     }
 
     private fun updateInternalState(isUp: Boolean, action: Int, now: Long) {
