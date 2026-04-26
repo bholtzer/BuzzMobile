@@ -68,10 +68,10 @@ class SosSettingsStore(
             } catch (e: Exception) {
                 TriggerType.VOLUME_CHORD
             },
-            triggerHoldMs = preferences[Keys.triggerHoldMs] ?: 1500L,
+            triggerHoldMs = preferences[Keys.triggerHoldMs] ?: 500L,
             chordWindowMs = preferences[Keys.chordWindowMs] ?: 600L,
             flashBlinkMs = preferences[Keys.flashBlinkMs] ?: 350L,
-            cooldownMs = preferences[Keys.cooldownMs] ?: 10_000L,
+            cooldownMs = preferences[Keys.cooldownMs] ?: 5000L,
             testMode = preferences[Keys.testMode] ?: true,
         )
     }

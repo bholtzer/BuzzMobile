@@ -4,7 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.telephony.TelephonyManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -49,28 +52,39 @@ class SosCoordinator(
         )
     }
 
-    fun startSos(source: TriggerSource) {
+    fun startSos(source: TriggerSource, forceTestMode: Boolean = false) {
         if (_runtimeState.value.mode == SosMode.SOS_ACTIVE) return
         val settings = settingsStore.settings.value
+        val isTestMode = forceTestMode || settings.testMode
+        
+        // 1. Immediate State Change & Tactile Feedback
         _runtimeState.value = SosRuntimeState(
             mode = SosMode.TRIGGER_DETECTED,
             lastSource = source,
-            message = "SOS trigger detected. Starting emergency actions...",
+            message = "SOS trigger detected! Starting emergency actions...",
         )
+        vibrate()
+
         appScope.launch {
+            // 2. Immediate UI launch before any slow background tasks (like Camera)
+            startForegroundService()
+            launchMainActivity()
+            
+            // Start siren as fast as possible
             runCatching { sirenPlayer.start(settings.sirenVolumeFraction) }
             
-            // Capture photo first
-            val photoFile = cameraHandler.capturePhoto()
-            
+            // 3. Parallelize flash and photo capture
             if (flashBlinkController.hasFlash()) {
                 flashBlinkController.start(appScope, settings.flashBlinkMs)
             }
             
+            // Capture photo (this is usually the slowest part)
+            val photoFile = cameraHandler.capturePhoto()
+            
             val contacts = PhoneNumberValidator.parseContacts(settings.emergencyNumber)
             val primaryContact = contacts.firstOrNull().orEmpty()
             
-            val callStatus = if (settings.testMode) {
+            val callStatus = if (isTestMode) {
                 CallStatus.SKIPPED_TEST_MODE
             } else if (primaryContact.isBlank()) {
                 CallStatus.FAILED
@@ -78,7 +92,7 @@ class SosCoordinator(
                 callHandler.placeDirectCall(primaryContact)
             }
             
-            val locationShareStatus = if (settings.testMode) {
+            val locationShareStatus = if (isTestMode) {
                 LocationShareStatus.SKIPPED_TEST_MODE
             } else {
                 locationShareHandler.sendLocationMessage(settings.emergencyNumber)
@@ -93,17 +107,30 @@ class SosCoordinator(
                 lastSource = source,
                 message = buildStatusMessage(callStatus, locationShareStatus),
             )
+            
+            // Refresh service notification with final status
             startForegroundService()
             
-            // Launch main activity
-            launchMainActivity()
-            
-            // SNAPPIER FLOW: Reduced delay to 300ms
-            delay(300)
-            
-            if (!settings.testMode && settings.whatsappNumber.isNotBlank()) {
+            if (!isTestMode && settings.whatsappNumber.isNotBlank()) {
                 sendWhatsAppAlert(settings.whatsappNumber, photoFile)
             }
+        }
+    }
+
+    private fun vibrate() {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(200)
         }
     }
 

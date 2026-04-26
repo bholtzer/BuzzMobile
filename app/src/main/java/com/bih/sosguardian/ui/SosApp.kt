@@ -49,6 +49,8 @@ import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -117,6 +119,7 @@ fun SosApp(application: SosApplication) {
 
     val accessibilityEnabled = remember(refreshTrigger) { isAccessibilityServiceEnabled(context) }
     val batteryIgnored = remember(refreshTrigger) { isBatteryOptimizationIgnored(context) }
+    val overlayPermission = remember(refreshTrigger) { isOverlayPermissionGranted(context) }
     
     val callPermission = remember(refreshTrigger) { ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED }
     val smsPermission = remember(refreshTrigger) { ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED }
@@ -133,7 +136,7 @@ fun SosApp(application: SosApplication) {
     val criticalPermissionsGranted = callPermission && smsPermission && fineLocationPermission && 
                                    cameraPermission && postNotificationsPermission
 
-    val onboardingComplete = accessibilityEnabled && batteryIgnored && criticalPermissionsGranted
+    val onboardingComplete = accessibilityEnabled && batteryIgnored && criticalPermissionsGranted && overlayPermission
 
     val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -193,6 +196,7 @@ fun SosApp(application: SosApplication) {
                     onboardingComplete = onboardingComplete,
                     accessibilityEnabled = accessibilityEnabled,
                     batteryIgnored = batteryIgnored,
+                    overlayPermission = overlayPermission,
                     criticalPermissionsGranted = criticalPermissionsGranted,
                     requestPermissions = { permissionsLauncher.launch(permissionList.toTypedArray()) },
                     onSaveSettings = viewModel::saveSettings,
@@ -213,6 +217,7 @@ private fun SetupScreen(
     onboardingComplete: Boolean,
     accessibilityEnabled: Boolean,
     batteryIgnored: Boolean,
+    overlayPermission: Boolean,
     criticalPermissionsGranted: Boolean,
     requestPermissions: () -> Unit,
     onSaveSettings: (SosSettings, () -> Unit) -> Unit,
@@ -250,8 +255,6 @@ private fun SetupScreen(
         object : ActivityResultContract<Void?, Uri?>() {
             override fun createIntent(context: Context, input: Void?): Intent {
                 val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
-                // Filter for WhatsApp contacts if possible, though standard picker might not support direct filtering well.
-                // We'll rely on the user choosing a WhatsApp-enabled contact.
                 return intent
             }
             override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
@@ -275,10 +278,15 @@ private fun SetupScreen(
     ) {
         HeroCard(enabled = draftEnabled && onboardingComplete, runtimeMode = runtimeMode, onboardingComplete = onboardingComplete)
         
+        if (accessibilityEnabled) {
+            ShortcutWarningCard(context)
+        }
+
         if (!onboardingComplete) {
             OnboardingProgressCard(
                 accessibilityEnabled = accessibilityEnabled,
                 batteryIgnored = batteryIgnored,
+                overlayPermission = overlayPermission,
                 criticalPermissionsGranted = criticalPermissionsGranted
             )
         }
@@ -287,6 +295,7 @@ private fun SetupScreen(
             context = context, 
             accessibilityEnabled = accessibilityEnabled,
             batteryIgnored = batteryIgnored,
+            overlayPermission = overlayPermission,
             criticalPermissionsGranted = criticalPermissionsGranted,
             onRequestPermissions = requestPermissions
         )
@@ -541,14 +550,50 @@ private fun HeroCard(enabled: Boolean, runtimeMode: SosMode, onboardingComplete:
 }
 
 @Composable
+private fun ShortcutWarningCard(context: Context) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0x33F97316)),
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth().clickable {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Rounded.Warning, contentDescription = null, tint = Color(0xFFF97316))
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(
+                    "Action Required: Disable Shortcut",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    "In Accessibility settings, turn OFF the 'Shortcut' toggle for SOS Guardian but keep the service ON.",
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun OnboardingProgressCard(
     accessibilityEnabled: Boolean,
     batteryIgnored: Boolean,
+    overlayPermission: Boolean,
     criticalPermissionsGranted: Boolean,
 ) {
-    val steps = listOf(accessibilityEnabled, criticalPermissionsGranted, batteryIgnored)
+    val steps = listOf(accessibilityEnabled, criticalPermissionsGranted, batteryIgnored, overlayPermission)
     val completedCount = steps.count { it }
-    val progress by animateFloatAsState(targetValue = completedCount / 3f, label = "onboarding_progress")
+    val progress by animateFloatAsState(targetValue = completedCount / 4f, label = "onboarding_progress")
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0x1AFFFFFF)),
@@ -569,7 +614,7 @@ private fun OnboardingProgressCard(
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
-                    "$completedCount / 3 steps",
+                    "$completedCount / 4 steps",
                     color = Color.White.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -586,8 +631,9 @@ private fun OnboardingProgressCard(
             Text(
                 text = when (completedCount) {
                     0 -> "Let's get you set up for safety."
-                    1 -> "Good start! Two more things to do."
-                    2 -> "Almost there! One final step."
+                    1 -> "Good start! Three more things to do."
+                    2 -> "Doing well! Two more steps."
+                    3 -> "Almost there! One final step."
                     else -> "You're all set and protected."
                 },
                 color = Color.White.copy(alpha = 0.6f),
@@ -603,6 +649,7 @@ private fun PermissionsCard(
     context: Context,
     accessibilityEnabled: Boolean,
     batteryIgnored: Boolean,
+    overlayPermission: Boolean,
     criticalPermissionsGranted: Boolean,
     onRequestPermissions: () -> Unit,
 ) {
@@ -648,12 +695,24 @@ private fun PermissionsCard(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 runCatching { context.startActivity(intent) }.onFailure {
-                    // Fallback to battery optimization settings if direct request fails
                     val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(fallbackIntent)
                 }
+            }
+
+            PermissionRow(
+                label = "Display over other apps", 
+                complete = overlayPermission, 
+                icon = Icons.Rounded.Layers,
+                description = "Allows the SOS screen to appear even when your phone is locked or in another app."
+            ) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    data = "package:${context.packageName}".toUri()
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
             }
         }
     }
@@ -711,8 +770,6 @@ private fun PermissionRow(
                 modifier = Modifier.size(28.dp)
             )
         } else {
-            // Simplified button that doesn't consume its own clicks, 
-            // relying on the Row's clickable instead
             Box(
                 modifier = Modifier
                     .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
@@ -806,6 +863,14 @@ private fun isBatteryOptimizationIgnored(context: Context): Boolean {
     val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    } else {
+        true
+    }
+}
+
+private fun isOverlayPermissionGranted(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        Settings.canDrawOverlays(context)
     } else {
         true
     }

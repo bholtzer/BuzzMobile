@@ -1,12 +1,13 @@
 package com.bih.sosguardian.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.bih.sosguardian.MainActivity
 import com.bih.sosguardian.SosApplication
-import com.bih.sosguardian.data.TriggerSource
 import com.bih.sosguardian.domain.TriggerDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,8 +88,14 @@ class SosAccessibilityService : AccessibilityService() {
         val settings = appContainer.settingsStore.settings.value
         
         return detector.processKeyEvent(event, settings) {
-            Log.d("SosAccessibilityService", "Trigger detected! Starting SOS...")
-            appContainer.sosCoordinator.startSos(TriggerSource.HARDWARE_BUTTONS)
+            Log.d("SosAccessibilityService", "Trigger detected! Opening app and starting SOS...")
+            val launchIntent = MainActivity.createLaunchIntent(
+                context = this,
+                triggerSos = true,
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            startActivity(launchIntent)
         }
     }
 }

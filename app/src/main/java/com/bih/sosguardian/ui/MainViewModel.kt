@@ -53,7 +53,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun triggerManualTest() {
-        appContainer.sosCoordinator.startSos(TriggerSource.MANUAL_TEST)
+        appContainer.sosCoordinator.startSos(
+            source = TriggerSource.MANUAL_TEST,
+            forceTestMode = true,
+        )
     }
 
     fun triggerManualSos() {
