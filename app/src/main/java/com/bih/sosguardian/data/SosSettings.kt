@@ -10,6 +10,7 @@ data class SosSettings(
     val emergencyNumber: String = "",
     val whatsappNumber: String = "",
     val enabled: Boolean = false,
+    val onboardingSeen: Boolean = false,
     val sirenVolumeFraction: Float = 1f,
     val triggerType: TriggerType = TriggerType.VOLUME_CHORD,
     val triggerHoldMs: Long = 500L,

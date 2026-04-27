@@ -63,6 +63,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         appContainer.sosCoordinator.startSos(TriggerSource.MANUAL_SOS)
     }
 
+    fun dismissOnboarding() {
+        viewModelScope.launch {
+            appContainer.settingsStore.updateSettings { it.copy(onboardingSeen = true) }
+        }
+    }
+
+    fun completeOnboarding(settings: SosSettings, onInvalidNumber: () -> Unit) {
+        if (!PhoneNumberValidator.isValid(settings.emergencyNumber)) {
+            onInvalidNumber()
+            return
+        }
+        viewModelScope.launch {
+            val completed = settings.copy(onboardingSeen = true)
+            appContainer.settingsStore.updateSettings { completed }
+            appContainer.sosCoordinator.setArmed(completed.enabled)
+            if (completed.enabled) {
+                SosForegroundService.Companion.start(getApplication())
+            } else {
+                SosForegroundService.Companion.stop(getApplication())
+            }
+        }
+    }
+
     fun stopSos() {
         appContainer.sosCoordinator.stopSos(StopReason.USER_STOPPED)
     }

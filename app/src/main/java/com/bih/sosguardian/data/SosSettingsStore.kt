@@ -24,6 +24,7 @@ class SosSettingsStore(
         val emergencyNumber = stringPreferencesKey("emergency_number")
         val whatsappNumber = stringPreferencesKey("whatsapp_number")
         val enabled = booleanPreferencesKey("enabled")
+        val onboardingSeen = booleanPreferencesKey("onboarding_seen")
         val sirenVolumeFraction = floatPreferencesKey("siren_volume_fraction")
         val triggerType = stringPreferencesKey("trigger_type")
         val triggerHoldMs = longPreferencesKey("trigger_hold_ms")
@@ -47,6 +48,7 @@ class SosSettingsStore(
             prefs[Keys.emergencyNumber] = updated.emergencyNumber
             prefs[Keys.whatsappNumber] = updated.whatsappNumber
             prefs[Keys.enabled] = updated.enabled
+            prefs[Keys.onboardingSeen] = updated.onboardingSeen
             prefs[Keys.sirenVolumeFraction] = updated.sirenVolumeFraction
             prefs[Keys.triggerType] = updated.triggerType.name
             prefs[Keys.triggerHoldMs] = updated.triggerHoldMs
@@ -62,6 +64,7 @@ class SosSettingsStore(
             emergencyNumber = preferences[Keys.emergencyNumber].orEmpty(),
             whatsappNumber = preferences[Keys.whatsappNumber].orEmpty(),
             enabled = preferences[Keys.enabled] ?: false,
+            onboardingSeen = preferences[Keys.onboardingSeen] ?: false,
             sirenVolumeFraction = preferences[Keys.sirenVolumeFraction] ?: 1f,
             triggerType = try {
                 TriggerType.valueOf(preferences[Keys.triggerType] ?: TriggerType.VOLUME_CHORD.name)
