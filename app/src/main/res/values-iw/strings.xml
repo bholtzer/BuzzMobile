@@ -93,7 +93,7 @@
     <string name="permission_dialog_body">SOS Guardian צריך גישה לשיחות, SMS, מיקום, מצלמה והתראות כדי לשלוח עזרה במהירות בזמן חירום. לחץ המשך ואז אפשר במסכי Android.</string>
     <string name="not_now">לא עכשיו</string>
     <string name="readiness_title">מוכנות</string>
-    <string name="readiness_body">השתמש קודם בכפתור הבדיקה. אם המכשיר חוסם את כפתורי הווליום כשהמסך נעול, השאר את האפליקציה פעילה עם שירות בקדמת המסך.</string>
+    <string name="readiness_body">אם המכשיר חוסם את כפתורי הווליום כשהמסך נעול, השאר את האפליקציה פעילה עם שירות בקדמת המסך.</string>
     <string name="contact1_saved_title">איש קשר חירום 1 נשמר</string>
     <string name="contact1_saved_body_whatsapp_next">איש קשר זה יקבל את השיחה ואת ה-SMS. נמשיך לאיש הקשר ב-WhatsApp.</string>
     <string name="contact1_saved_body_final_next">איש קשר זה יקבל את השיחה ואת ה-SMS. נמשיך לשלב הסופי.</string>
@@ -102,7 +102,7 @@
     <string name="same_contact_title">משתמשים באותו איש קשר</string>
     <string name="same_contact_body">אותו אדם יקבל את התראת WhatsApp. נמשיך לשלב הסופי.</string>
     <string name="accessibility_dialog_body">במסך Android:</string>
-    <string name="accessibility_dialog_step1">1. לחץ על SOS Guardian Trigger Service.</string>
+    <string name="accessibility_dialog_step1">1. לחץ על שירות ההפעלה של SOS Guardian.</string>
     <string name="accessibility_dialog_step2">2. הפעל את המתג העליון.</string>
     <string name="accessibility_dialog_step3">3. לחץ אפשר ואז חזור לכאן.</string>
     <string name="press_label">לחץ</string>
@@ -115,7 +115,7 @@
     <string name="accessibility_ready">הנגישות מוכנה</string>
     <string name="accessibility_turn_on_switch">הפעל את מתג SOS Guardian</string>
     <string name="accessibility_ready_body">SOS Guardian יכול עכשיו לזהות את ההפעלה מכפתורי הווליום.</string>
-    <string name="accessibility_pending_body">נפתח את מסך SOS Guardian Trigger Service. הפעל את המתג העליון.</string>
+    <string name="accessibility_pending_body">נפתח את מסך שירות ההפעלה של SOS Guardian. הפעל את המתג העליון.</string>
     <string name="accessibility_pending_hint">לחץ על הכפתור. הפעל את המתג העליון. חזור לאפליקציה.</string>
     <string name="accessibility_preview_title">תצוגה מקדימה של המסך שצריך לראות</string>
     <string name="accessibility_preview_switch_title">הפעל את המתג העליון הזה</string>

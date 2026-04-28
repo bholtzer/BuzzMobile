@@ -2085,7 +2085,7 @@ private fun OnboardingGuidePage() {
                 "Save the setup after entering the contacts.",
                 "Turn on SOS monitoring.",
                 "Press Volume Down + Volume Up to trigger SOS.",
-                "Use Run test first before depending on it.",
+                "Keep SOS monitoring on before depending on it.",
                 "If the user is older or a child, practice once together.",
             ),
         )

@@ -34,7 +34,6 @@ class SosSettingsStore(
         val chordWindowMs = longPreferencesKey("chord_window_ms")
         val flashBlinkMs = longPreferencesKey("flash_blink_ms")
         val cooldownMs = longPreferencesKey("cooldown_ms")
-        val testMode = booleanPreferencesKey("test_mode")
     }
 
     override val settings: StateFlow<SosSettings> = context.dataStore.data
@@ -60,7 +59,6 @@ class SosSettingsStore(
             prefs[Keys.chordWindowMs] = updated.chordWindowMs
             prefs[Keys.flashBlinkMs] = updated.flashBlinkMs
             prefs[Keys.cooldownMs] = updated.cooldownMs
-            prefs[Keys.testMode] = updated.testMode
         }
     }
 
@@ -82,7 +80,6 @@ class SosSettingsStore(
             chordWindowMs = preferences[Keys.chordWindowMs] ?: 600L,
             flashBlinkMs = preferences[Keys.flashBlinkMs] ?: 350L,
             cooldownMs = preferences[Keys.cooldownMs] ?: 5000L,
-            testMode = preferences[Keys.testMode] ?: true,
         )
     }
 }

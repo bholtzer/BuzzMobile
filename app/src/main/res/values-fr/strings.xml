@@ -93,7 +93,7 @@
     <string name="permission_dialog_body">SOS Guardian a besoin des appels, SMS, position, caméra et notifications pour envoyer de l’aide rapidement en cas d’urgence. Appuyez sur Continuer, puis sur Autoriser dans les écrans Android.</string>
     <string name="not_now">Pas maintenant</string>
     <string name="readiness_title">Préparation</string>
-    <string name="readiness_body">Utilisez d’abord le bouton de test. Si votre appareil bloque les boutons de volume lorsque l’écran est verrouillé, gardez l’application armée avec le service au premier plan.</string>
+    <string name="readiness_body">Si votre appareil bloque les boutons de volume lorsque l’écran est verrouillé, gardez l’application armée avec le service au premier plan.</string>
     <string name="contact1_saved_title">Contact d’urgence 1 enregistré</string>
     <string name="contact1_saved_body_whatsapp_next">Ce contact recevra l’appel et le SMS. Nous continuerons avec le contact WhatsApp.</string>
     <string name="contact1_saved_body_final_next">Ce contact recevra l’appel et le SMS. Nous continuerons avec l’étape finale.</string>
@@ -102,7 +102,7 @@
     <string name="same_contact_title">Même contact utilisé</string>
     <string name="same_contact_body">La même personne recevra l’alerte WhatsApp. Nous continuerons avec l’étape finale.</string>
     <string name="accessibility_dialog_body">Sur l’écran Android :</string>
-    <string name="accessibility_dialog_step1">1. Appuyez sur SOS Guardian Trigger Service.</string>
+    <string name="accessibility_dialog_step1">1. Appuyez sur le service de déclenchement SOS Guardian.</string>
     <string name="accessibility_dialog_step2">2. Activez l’interrupteur du haut.</string>
     <string name="accessibility_dialog_step3">3. Appuyez sur Autoriser, puis revenez.</string>
     <string name="press_label">APPUYER</string>
@@ -115,7 +115,7 @@
     <string name="accessibility_ready">Accessibilité prête</string>
     <string name="accessibility_turn_on_switch">Activez l’interrupteur SOS Guardian</string>
     <string name="accessibility_ready_body">SOS Guardian peut maintenant détecter le déclencheur avec les boutons de volume.</string>
-    <string name="accessibility_pending_body">Nous allons ouvrir l’écran SOS Guardian Trigger Service. Activez l’interrupteur du haut.</string>
+    <string name="accessibility_pending_body">Nous allons ouvrir l’écran du service de déclenchement SOS Guardian. Activez l’interrupteur du haut.</string>
     <string name="accessibility_pending_hint">Appuyez sur le bouton. Activez l’interrupteur du haut. Revenez dans cette app.</string>
     <string name="accessibility_preview_title">Aperçu de l’écran à rechercher</string>
     <string name="accessibility_preview_switch_title">Activez cet interrupteur du haut</string>

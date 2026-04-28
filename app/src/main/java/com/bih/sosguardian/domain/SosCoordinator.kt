@@ -37,10 +37,9 @@ class SosCoordinator(
         )
     }
 
-    fun startSos(source: TriggerSource, forceTestMode: Boolean = false) {
+    fun startSos(source: TriggerSource) {
         if (_runtimeState.value.mode == SosMode.SOS_ACTIVE) return
         val settings = settingsRepository.settings.value
-        val isTestMode = forceTestMode || settings.testMode
         
         // 1. Immediate State Change & Tactile Feedback
         _runtimeState.value = SosRuntimeState(
@@ -69,19 +68,13 @@ class SosCoordinator(
             val contacts = PhoneNumberValidator.parseContacts(settings.emergencyNumber)
             val primaryContact = contacts.firstOrNull().orEmpty()
             
-            val callStatus = if (isTestMode) {
-                CallStatus.SKIPPED_TEST_MODE
-            } else if (primaryContact.isBlank()) {
+            val callStatus = if (primaryContact.isBlank()) {
                 CallStatus.FAILED
             } else {
                 emergencyCaller.placeDirectCall(primaryContact)
             }
             
-            val locationShareStatus = if (isTestMode) {
-                LocationShareStatus.SKIPPED_TEST_MODE
-            } else {
-                locationMessenger.sendLocationMessage(settings.emergencyNumber)
-            }
+            val locationShareStatus = locationMessenger.sendLocationMessage(settings.emergencyNumber)
             
             _runtimeState.value = SosRuntimeState(
                 mode = SosMode.SOS_ACTIVE,
@@ -96,7 +89,7 @@ class SosCoordinator(
             // Refresh service notification with final status
             platformActions.startForegroundSync()
             
-            if (!isTestMode && settings.whatsappNumber.isNotBlank()) {
+            if (settings.whatsappNumber.isNotBlank()) {
                 platformActions.sendWhatsAppAlert(
                     whatsappNumber = settings.whatsappNumber,
                     photoFile = photoFile,
@@ -133,14 +126,12 @@ class SosCoordinator(
         locationShareStatus: LocationShareStatus,
     ): String {
         val callMessage = when (callStatus) {
-            CallStatus.SKIPPED_TEST_MODE -> "Test mode active: emergency call skipped."
             CallStatus.PLACED_DIRECT_CALL -> "Emergency call placed."
             CallStatus.OPENED_DIALER_FALLBACK -> "Direct call failed, so the dialer was opened instead."
             CallStatus.FAILED -> "Emergency call could not be started."
             CallStatus.IDLE -> "Emergency call status is idle."
         }
         val locationMessage = when (locationShareStatus) {
-            LocationShareStatus.SKIPPED_TEST_MODE -> "Location SMS skipped in test mode."
             LocationShareStatus.SENT -> "Location SMS sent to all emergency contacts."
             LocationShareStatus.PERMISSION_DENIED -> "Location SMS could not be sent because SMS or location permission is missing."
             LocationShareStatus.LOCATION_UNAVAILABLE -> "Location SMS could not be sent because no recent location was available."

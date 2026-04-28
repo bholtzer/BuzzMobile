@@ -93,7 +93,7 @@
     <string name="permission_dialog_body">SOS Guardian needs calling, SMS, location, camera, and notification access so it can send help quickly during an emergency. Press Continue, then press Allow on the Android screens.</string>
     <string name="not_now">Not now</string>
     <string name="readiness_title">Readiness</string>
-    <string name="readiness_body">Use the test button first. If your device blocks lock-screen key filtering, keep the app armed in the foreground service as a fallback.</string>
+    <string name="readiness_body">If your device blocks lock-screen key filtering, keep the app armed in the foreground service as a fallback.</string>
     <string name="contact1_saved_title">Emergency contact 1 saved</string>
     <string name="contact1_saved_body_whatsapp_next">This contact will receive the call and SMS. We will continue to the WhatsApp contact.</string>
     <string name="contact1_saved_body_final_next">This contact will receive the call and SMS. We will continue to the final setup step.</string>

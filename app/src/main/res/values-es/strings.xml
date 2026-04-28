@@ -93,7 +93,7 @@
     <string name="permission_dialog_body">SOS Guardian necesita acceso a llamadas, SMS, ubicación, cámara y notificaciones para enviar ayuda rápido durante una emergencia. Presiona Continuar y luego Permitir en las pantallas de Android.</string>
     <string name="not_now">Ahora no</string>
     <string name="readiness_title">Estado de preparación</string>
-    <string name="readiness_body">Usa primero el botón de prueba. Si tu dispositivo bloquea los botones de volumen con la pantalla bloqueada, mantén la app armada con el servicio en primer plano.</string>
+    <string name="readiness_body">Si tu dispositivo bloquea los botones de volumen con la pantalla bloqueada, mantén la app armada con el servicio en primer plano.</string>
     <string name="contact1_saved_title">Contacto de emergencia 1 guardado</string>
     <string name="contact1_saved_body_whatsapp_next">Este contacto recibirá la llamada y el SMS. Continuaremos con el contacto de WhatsApp.</string>
     <string name="contact1_saved_body_final_next">Este contacto recibirá la llamada y el SMS. Continuaremos con el paso final.</string>
@@ -102,7 +102,7 @@
     <string name="same_contact_title">Usando el mismo contacto</string>
     <string name="same_contact_body">La misma persona recibirá la alerta de WhatsApp. Continuaremos con el paso final.</string>
     <string name="accessibility_dialog_body">En la pantalla de Android:</string>
-    <string name="accessibility_dialog_step1">1. Presiona SOS Guardian Trigger Service.</string>
+    <string name="accessibility_dialog_step1">1. Presiona el servicio de activación de SOS Guardian.</string>
     <string name="accessibility_dialog_step2">2. Activa el interruptor superior.</string>
     <string name="accessibility_dialog_step3">3. Presiona Permitir y vuelve aquí.</string>
     <string name="press_label">PRESIONAR</string>
@@ -115,7 +115,7 @@
     <string name="accessibility_ready">Accesibilidad lista</string>
     <string name="accessibility_turn_on_switch">Activa el interruptor de SOS Guardian</string>
     <string name="accessibility_ready_body">SOS Guardian ya puede detectar el activador con los botones de volumen.</string>
-    <string name="accessibility_pending_body">Abriremos la pantalla de SOS Guardian Trigger Service. Activa el interruptor superior.</string>
+    <string name="accessibility_pending_body">Abriremos la pantalla del servicio de activación de SOS Guardian. Activa el interruptor superior.</string>
     <string name="accessibility_pending_hint">Presiona el botón. Activa el interruptor superior. Vuelve a esta app.</string>
     <string name="accessibility_preview_title">Vista previa de la pantalla que debes ver</string>
     <string name="accessibility_preview_switch_title">Activa este interruptor superior</string>
