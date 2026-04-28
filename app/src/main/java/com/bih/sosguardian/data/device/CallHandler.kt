@@ -1,4 +1,4 @@
-package com.bih.sosguardian.domain
+package com.bih.sosguardian.data.device
 
 import android.Manifest
 import android.content.ActivityNotFoundException
@@ -8,11 +8,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import com.bih.sosguardian.data.CallStatus
+import com.bih.sosguardian.domain.EmergencyCaller
 
 class CallHandler(
     private val context: Context,
-) {
-    fun placeDirectCall(number: String): CallStatus {
+) : EmergencyCaller {
+    override fun placeDirectCall(number: String): CallStatus {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) 
             != PackageManager.PERMISSION_GRANTED) {
             return openDialerFallback(number)

@@ -1,10 +1,11 @@
-package com.bih.sosguardian.domain
+package com.bih.sosguardian.data.device
 
 import android.content.Context
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.util.Log
+import com.bih.sosguardian.domain.FlashController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 
 class FlashBlinkController(
     context: Context,
-) {
+) : FlashController {
     private val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
     private val cameraId: String? = try {
         cameraManager.cameraIdList.firstOrNull { id ->
@@ -29,9 +30,9 @@ class FlashBlinkController(
 
     private var blinkJob: Job? = null
 
-    fun hasFlash(): Boolean = cameraId != null
+    override fun hasFlash(): Boolean = cameraId != null
 
-    fun start(scope: CoroutineScope, blinkMs: Long) {
+    override fun start(scope: CoroutineScope, blinkMs: Long) {
         val safeCameraId = cameraId ?: return
         if (blinkJob?.isActive == true) return
 
@@ -49,7 +50,7 @@ class FlashBlinkController(
         }
     }
 
-    suspend fun stop() {
+    override suspend fun stop() {
         blinkJob?.cancelAndJoin()
         blinkJob = null
         cameraId?.let { safeCameraId ->

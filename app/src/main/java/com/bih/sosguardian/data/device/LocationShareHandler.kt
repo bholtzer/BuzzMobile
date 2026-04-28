@@ -1,4 +1,4 @@
-package com.bih.sosguardian.domain
+package com.bih.sosguardian.data.device
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -9,13 +9,16 @@ import android.location.LocationManager
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
 import com.bih.sosguardian.data.LocationShareStatus
+import com.bih.sosguardian.domain.LocationMessenger
+import com.bih.sosguardian.domain.PhoneNumberValidator
+import com.bih.sosguardian.domain.SosLocation
 
 class LocationShareHandler(
     private val context: Context,
-) {
+) : LocationMessenger {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-    fun sendLocationMessage(rawContacts: String): LocationShareStatus {
+    override fun sendLocationMessage(rawContacts: String): LocationShareStatus {
         val contacts = PhoneNumberValidator.parseContacts(rawContacts)
         if (contacts.isEmpty()) return LocationShareStatus.NO_CONTACTS
 
@@ -45,7 +48,7 @@ class LocationShareHandler(
     }
 
     @SuppressLint("MissingPermission")
-    fun getBestLastKnownLocation(): Location? {
+    override fun getBestLastKnownLocation(): SosLocation? {
         val providers = listOf(
             LocationManager.GPS_PROVIDER,
             LocationManager.NETWORK_PROVIDER,
@@ -54,6 +57,12 @@ class LocationShareHandler(
         return providers
             .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
             .maxByOrNull { it.time }
+            ?.let { location ->
+                SosLocation(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                )
+            }
     }
 
     private fun hasPermission(permission: String): Boolean {

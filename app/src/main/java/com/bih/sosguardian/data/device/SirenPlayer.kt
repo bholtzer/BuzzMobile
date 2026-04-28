@@ -1,22 +1,23 @@
-package com.bih.sosguardian.domain
+package com.bih.sosguardian.data.device
 
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import com.bih.sosguardian.domain.SirenController
 import kotlin.math.PI
 import kotlin.math.sin
 
 class SirenPlayer(
     private val context: Context,
-) {
+) : SirenController {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var audioTrack: AudioTrack? = null
     private var previousAlarmVolume: Int? = null
     private var isPlaying = false
 
-    fun start(volumeFraction: Float) {
+    override fun start(volumeFraction: Float) {
         if (isPlaying) return
         isPlaying = true
 
@@ -77,7 +78,7 @@ class SirenPlayer(
         }.start()
     }
 
-    fun stop() {
+    override fun stop() {
         isPlaying = false
         audioTrack?.runCatching {
             stop()

@@ -6,20 +6,25 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.LocaleList
 import android.os.PowerManager
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -63,16 +69,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,20 +95,55 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bih.sosguardian.R
 import com.bih.sosguardian.SosApplication
 import com.bih.sosguardian.data.SosMode
 import com.bih.sosguardian.data.SosSettings
-import com.bih.sosguardian.data.TriggerType
 import com.bih.sosguardian.domain.PhoneNumberValidator
 import com.bih.sosguardian.service.SosAccessibilityService
+import java.util.Locale
+
+private val GuardianInk = Color(0xFF101828)
+private val GuardianSurface = Color(0xFFFFFBF7)
+private val GuardianSurfaceAlt = Color(0xFFF4F7F9)
+private val GuardianRed = Color(0xFFB42318)
+private val GuardianRedSoft = Color(0xFFFFE4E0)
+private val GuardianTeal = Color(0xFF0F766E)
+private val GuardianTealSoft = Color(0xFFDDF7F2)
+private val GuardianText = Color(0xFF1F2937)
+private val GuardianMuted = Color(0xFF52616B)
+
+private data class AppLanguage(
+    val code: String,
+    val label: String,
+)
+
+private val supportedLanguages = listOf(
+    AppLanguage("en", "English"),
+    AppLanguage("he", "עברית"),
+    AppLanguage("es", "Español"),
+    AppLanguage("fr", "Français"),
+)
+
+@Composable
+private fun stringResource(id: Int): String {
+    return LocalContext.current.getString(id)
+}
+
+@Composable
+private fun stringResource(id: Int, vararg formatArgs: Any): String {
+    return LocalContext.current.getString(id, *formatArgs)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,8 +151,28 @@ fun SosApp(application: SosApplication) {
     val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(application))
     val settings by viewModel.settings.collectAsState()
     val runtimeState by viewModel.runtimeState.collectAsState()
-    val context = LocalContext.current
+    val baseContext = LocalContext.current
+    val activityResultRegistryOwner = checkNotNull(LocalActivityResultRegistryOwner.current) {
+        "SOS Guardian requires an ActivityResultRegistryOwner."
+    }
+    var pendingLanguageCode by rememberSaveable { mutableStateOf<String?>(null) }
+    val effectiveLanguageCode = pendingLanguageCode ?: settings.languageCode
+    val context = remember(baseContext, effectiveLanguageCode) {
+        baseContext.localizedContext(effectiveLanguageCode)
+    }
+    val localizedConfiguration = remember(context) {
+        Configuration(context.resources.configuration)
+    }
+    val activity = baseContext.findActivity()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showPermissionRationale by rememberSaveable { mutableStateOf(false) }
+    var permissionRequestAttempted by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(settings.languageCode, pendingLanguageCode) {
+        if (pendingLanguageCode != null && pendingLanguageCode == settings.languageCode) {
+            pendingLanguageCode = null
+        }
+    }
 
     // State for refreshing permissions when returning to app
     var refreshTrigger by remember { mutableIntStateOf(0) }
@@ -165,58 +227,115 @@ fun SosApp(application: SosApplication) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("SOS Guardian") })
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.Transparent,
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF140B13), Color(0xFF401122), Color(0xFFF8E9D8)),
-                    ),
-                )
-                .padding(innerPadding)
-                .padding(WindowInsets.safeDrawing.asPaddingValues()),
-        ) {
-            when {
-                !settings.onboardingSeen -> FirstRunOnboardingScreen(
-                    context = context,
-                    currentSettings = settings,
-                    accessibilityEnabled = accessibilityEnabled,
-                    batteryIgnored = batteryIgnored,
-                    overlayPermission = overlayPermission,
-                    criticalPermissionsGranted = criticalPermissionsGranted,
-                    requestPermissions = { permissionsLauncher.launch(permissionList.toTypedArray()) },
-                    onFinishSetup = viewModel::completeOnboarding,
-                )
+    val requestPermissionsWithModernFlow = {
+        val shouldExplainFirst = activity != null && permissionList.any { permission ->
+            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+        }
+        if (shouldExplainFirst) {
+            showPermissionRationale = true
+        } else {
+            permissionRequestAttempted = true
+            permissionsLauncher.launch(permissionList.toTypedArray())
+        }
+    }
+    val permissionNeedsSettings = activity != null &&
+        permissionRequestAttempted &&
+        permissionList.any { permission ->
+            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+        }
 
-                runtimeState.mode == SosMode.SOS_ACTIVE || runtimeState.mode == SosMode.TRIGGER_DETECTED -> ActiveSosScreen(
-                    message = runtimeState.message,
-                    callStatus = runtimeState.callStatus.name.replace('_', ' '),
-                    locationStatus = runtimeState.locationShareStatus.name.replace('_', ' '),
-                    onStop = viewModel::stopSos,
-                )
+    CompositionLocalProvider(
+        LocalContext provides context,
+        LocalConfiguration provides localizedConfiguration,
+        LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text(stringResource(R.string.app_name)) })
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = Color.Transparent,
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF101828), Color(0xFF3A1014), Color(0xFFF4F7F9)),
+                        ),
+                    )
+                    .padding(innerPadding)
+                    .padding(WindowInsets.safeDrawing.asPaddingValues()),
+            ) {
+                when {
+                    runtimeState.mode == SosMode.SOS_ACTIVE || runtimeState.mode == SosMode.TRIGGER_DETECTED -> ActiveSosScreen(
+                        message = runtimeState.message,
+                        callStatus = runtimeState.callStatus.name.replace('_', ' '),
+                        locationStatus = runtimeState.locationShareStatus.name.replace('_', ' '),
+                        onStop = viewModel::stopSos,
+                    )
 
-                else -> SetupScreen(
-                    context = context,
-                    currentSettings = settings,
-                    runtimeMode = runtimeState.mode,
-                    onboardingComplete = onboardingComplete,
-                    accessibilityEnabled = accessibilityEnabled,
-                    batteryIgnored = batteryIgnored,
-                    overlayPermission = overlayPermission,
-                    criticalPermissionsGranted = criticalPermissionsGranted,
-                    requestPermissions = { permissionsLauncher.launch(permissionList.toTypedArray()) },
-                    onSaveSettings = viewModel::saveSettings,
-                    onManualTest = viewModel::triggerManualTest,
-                    onManualSos = viewModel::triggerManualSos,
-                )
+                    !onboardingComplete || !settings.onboardingSeen -> FirstRunOnboardingScreen(
+                        context = context,
+                        currentSettings = settings.copy(languageCode = effectiveLanguageCode),
+                        accessibilityEnabled = accessibilityEnabled,
+                        batteryIgnored = batteryIgnored,
+                        overlayPermission = overlayPermission,
+                        criticalPermissionsGranted = criticalPermissionsGranted,
+                        requestPermissions = requestPermissionsWithModernFlow,
+                        permissionNeedsSettings = permissionNeedsSettings,
+                        openAppSettings = { openAppSettings(context) },
+                        onLanguageSelected = { languageCode ->
+                            pendingLanguageCode = languageCode
+                            viewModel.saveLanguage(languageCode)
+                        },
+                        onFinishSetup = viewModel::completeOnboarding,
+                    )
+
+                    else -> SetupScreen(
+                        context = context,
+                        currentSettings = settings.copy(languageCode = effectiveLanguageCode),
+                        runtimeMode = runtimeState.mode,
+                        onboardingComplete = onboardingComplete,
+                        accessibilityEnabled = accessibilityEnabled,
+                        batteryIgnored = batteryIgnored,
+                        overlayPermission = overlayPermission,
+                        criticalPermissionsGranted = criticalPermissionsGranted,
+                        requestPermissions = requestPermissionsWithModernFlow,
+                        onManualSos = viewModel::triggerManualSos,
+                    )
+                }
             }
+        }
+
+        if (showPermissionRationale) {
+            AlertDialog(
+                onDismissRequest = { showPermissionRationale = false },
+                title = { Text(stringResource(R.string.permission_dialog_title)) },
+                text = {
+                    Text(
+                        stringResource(R.string.permission_dialog_body)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showPermissionRationale = false
+                            permissionRequestAttempted = true
+                            permissionsLauncher.launch(permissionList.toTypedArray())
+                        },
+                    ) {
+                        Text(stringResource(R.string.onboarding_continue))
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { showPermissionRationale = false }) {
+                        Text(stringResource(R.string.not_now))
+                    }
+                },
+            )
         }
     }
 }
@@ -233,49 +352,18 @@ private fun SetupScreen(
     overlayPermission: Boolean,
     criticalPermissionsGranted: Boolean,
     requestPermissions: () -> Unit,
-    onSaveSettings: (SosSettings, () -> Unit) -> Unit,
-    onManualTest: () -> Unit,
     onManualSos: () -> Unit,
 ) {
-    var draftNumber by rememberSaveable(currentSettings.emergencyNumber) { mutableStateOf(currentSettings.emergencyNumber) }
-    var draftWhatsappNumber by rememberSaveable(currentSettings.whatsappNumber) { mutableStateOf(currentSettings.whatsappNumber) }
-    var draftEnabled by rememberSaveable(currentSettings.enabled) { mutableStateOf(currentSettings.enabled) }
-    var draftVolume by rememberSaveable(currentSettings.sirenVolumeFraction) { mutableFloatStateOf(currentSettings.sirenVolumeFraction) }
-    var draftChordWindow by rememberSaveable(currentSettings.chordWindowMs) { mutableFloatStateOf(currentSettings.chordWindowMs.toFloat()) }
-    var draftBlinkMs by rememberSaveable(currentSettings.flashBlinkMs) { mutableFloatStateOf(currentSettings.flashBlinkMs.toFloat()) }
-    var draftCooldownMs by rememberSaveable(currentSettings.cooldownMs) { mutableFloatStateOf(currentSettings.cooldownMs.toFloat()) }
     val scrollState = rememberScrollState()
-    val numberValid = PhoneNumberValidator.isValid(draftNumber)
+    val numberValid = PhoneNumberValidator.isValid(currentSettings.emergencyNumber)
 
-    val isWhatsappInstalled = remember { 
-        isAppInstalled(context, "com.whatsapp") || isAppInstalled(context, "com.whatsapp.w4b") 
-    }
-
-    val pickPhoneContract = remember {
-        object : ActivityResultContract<Void?, Uri?>() {
-            override fun createIntent(context: Context, input: Void?): Intent =
-                Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
-            override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
-                if (resultCode == Activity.RESULT_OK) intent?.data else null
-        }
-    }
-
-    val pickWhatsappContract = remember {
-        object : ActivityResultContract<Void?, Uri?>() {
-            override fun createIntent(context: Context, input: Void?): Intent {
-                val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
-                return intent
-            }
-            override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
-                if (resultCode == Activity.RESULT_OK) intent?.data else null
-        }
-    }
-
-    val emergencyPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
-        uri?.let { draftNumber = pickContactPhone(context, it) ?: draftNumber }
-    }
-    val whatsappPicker = rememberLauncherForActivityResult(pickWhatsappContract) { uri ->
-        uri?.let { draftWhatsappNumber = pickContactPhone(context, it) ?: draftWhatsappNumber }
+    if (onboardingComplete) {
+        EmergencyInformationScreen(
+            settings = currentSettings,
+            runtimeMode = runtimeMode,
+            onManualSos = onManualSos,
+        )
+        return
     }
 
     Column(
@@ -285,7 +373,7 @@ private fun SetupScreen(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        HeroCard(enabled = draftEnabled && onboardingComplete, runtimeMode = runtimeMode, onboardingComplete = onboardingComplete)
+        HeroCard(enabled = currentSettings.enabled && onboardingComplete, runtimeMode = runtimeMode, onboardingComplete = onboardingComplete)
         
         if (accessibilityEnabled) {
             ShortcutWarningCard(context)
@@ -329,138 +417,18 @@ private fun SetupScreen(
             )
         }
 
-        PermissionsCard(
-            context = context, 
-            accessibilityEnabled = accessibilityEnabled,
-            batteryIgnored = batteryIgnored,
-            overlayPermission = overlayPermission,
-            criticalPermissionsGranted = criticalPermissionsGranted,
-            onRequestPermissions = requestPermissions
-        )
+        if (!onboardingComplete) {
+            PermissionsCard(
+                context = context,
+                accessibilityEnabled = accessibilityEnabled,
+                batteryIgnored = batteryIgnored,
+                overlayPermission = overlayPermission,
+                criticalPermissionsGranted = criticalPermissionsGranted,
+                onRequestPermissions = requestPermissions
+            )
+        }
         
         WarningCard()
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F2EA)),
-            shape = RoundedCornerShape(28.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Text("Emergency setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(
-                    value = draftNumber,
-                    onValueChange = { draftNumber = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Emergency contacts (SMS/Call)") },
-                    trailingIcon = {
-                        IconButton(onClick = { emergencyPicker.launch(null) }) {
-                            Icon(Icons.Rounded.ContactPage, contentDescription = "Pick contact")
-                        }
-                    },
-                    supportingText = {
-                        Text(
-                            if (numberValid) {
-                                "First contact is used for the direct call. Every listed contact receives the location SMS."
-                            } else {
-                                "Enter one or more valid phone numbers separated by commas, semicolons, or new lines."
-                            },
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    singleLine = true,
-                    isError = !numberValid && draftNumber.isNotBlank(),
-                )
-
-                if (isWhatsappInstalled) {
-                    OutlinedTextField(
-                        value = draftWhatsappNumber,
-                        onValueChange = { draftWhatsappNumber = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("WhatsApp Emergency Contact") },
-                        trailingIcon = {
-                            IconButton(onClick = { whatsappPicker.launch(null) }) {
-                                Icon(Icons.Rounded.ContactPage, contentDescription = "Pick contact")
-                            }
-                        },
-                        supportingText = {
-                            Text("This contact will receive the photo and location alert via WhatsApp.")
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                    )
-                }
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1DF)),
-                    shape = RoundedCornerShape(22.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text("Trigger method", fontWeight = FontWeight.Bold, color = Color(0xFF7C2D12))
-                        Text(
-                            "SOS starts when the user presses Volume Up + Volume Down together.",
-                            color = Color(0xFF6B3E26),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                }
-
-                SettingSlider("Siren loudness", "${(draftVolume * 100).toInt()}%", draftVolume, 0.2f..1f) { draftVolume = it }
-                SettingSlider("Button overlap window", "${draftChordWindow.toInt()} ms", draftChordWindow, 300f..1200f) { draftChordWindow = it }
-                SettingSlider("Flash blink interval", "${draftBlinkMs.toInt()} ms", draftBlinkMs, 150f..1000f) { draftBlinkMs = it }
-                SettingSlider("Cooldown duration", "${draftCooldownMs.toInt()} ms", draftCooldownMs, 3000f..20000f) { draftCooldownMs = it }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Turn on SOS trigger", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            if (onboardingComplete) {
-                                "This lets the app listen in the background for Volume Up + Volume Down."
-                            } else {
-                                "Finish permissions and setup first. Then the app can listen for Volume Up + Volume Down."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (onboardingComplete) Color.Unspecified else MaterialTheme.colorScheme.error
-                        )
-                    }
-                    Switch(
-                        checked = draftEnabled && onboardingComplete, 
-                        onCheckedChange = { draftEnabled = it },
-                        enabled = onboardingComplete
-                    )
-                }
-
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = numberValid,
-                    onClick = {
-                        val updated = currentSettings.copy(
-                            emergencyNumber = draftNumber.trim(),
-                            whatsappNumber = draftWhatsappNumber.trim(),
-                            enabled = draftEnabled && onboardingComplete,
-                            sirenVolumeFraction = draftVolume,
-                            triggerType = TriggerType.VOLUME_CHORD,
-                            triggerHoldMs = currentSettings.triggerHoldMs,
-                            chordWindowMs = draftChordWindow.toLong(),
-                            flashBlinkMs = draftBlinkMs.toLong(),
-                            cooldownMs = draftCooldownMs.toLong(),
-                            testMode = currentSettings.testMode,
-                        )
-                        onSaveSettings(updated) { draftEnabled = false }
-                    },
-                ) {
-                    Text("Save setup")
-                }
-            }
-        }
 
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1E151A)),
@@ -470,13 +438,13 @@ private fun SetupScreen(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Readiness", color = Color(0xFFFFF7ED), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.readiness_title), color = Color(0xFFFFF7ED), style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Use the test button first. If your device blocks lock-screen key filtering, keep the app armed in the foreground service as a fallback.",
+                    stringResource(R.string.readiness_body),
                     color = Color(0xFFFFDEC7),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button( modifier = Modifier.fillMaxWidth(),onClick = onManualSos, enabled = numberValid && onboardingComplete) { Text("Manual SOS") }
+                    Button( modifier = Modifier.fillMaxWidth(),onClick = onManualSos, enabled = numberValid && onboardingComplete) { Text(stringResource(R.string.home_manual_sos)) }
                 }
             }
         }
@@ -506,6 +474,322 @@ private fun isAppInstalled(context: Context, packageName: String): Boolean {
     }
 }
 
+@Composable
+private fun EmergencyInformationScreen(
+    settings: SosSettings,
+    runtimeMode: SosMode,
+    onManualSos: () -> Unit,
+) {
+    val numberValid = PhoneNumberValidator.isValid(settings.emergencyNumber)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = GuardianSurface),
+            shape = RoundedCornerShape(28.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .background(GuardianTealSoft, RoundedCornerShape(18.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Shield,
+                            contentDescription = null,
+                            tint = GuardianTeal,
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.home_emergency_information),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Black,
+                            color = GuardianText,
+                        )
+                        Text(
+                            "Status: ${runtimeMode.name.lowercase().replace('_', ' ')}",
+                            color = GuardianMuted,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_protected_person),
+                    value = settings.userName.ifBlank { stringResource(R.string.home_missing) },
+                )
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_call_sms_contact),
+                    value = settings.emergencyNumber.ifBlank { stringResource(R.string.home_missing) },
+                )
+                if (settings.whatsappNumber.isNotBlank()) {
+                    EmergencyInfoRow(
+                        label = stringResource(R.string.home_whatsapp_contact),
+                        value = settings.whatsappNumber,
+                    )
+                }
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_trigger_method),
+                    value = stringResource(R.string.home_trigger_body),
+                )
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_siren),
+                    value = "${(settings.sirenVolumeFraction * 100).toInt()}%",
+                )
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_flash),
+                    value = "${settings.flashBlinkMs} ms",
+                )
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_cooldown),
+                    value = "${settings.cooldownMs / 1000} sec",
+                )
+                EmergencyInfoRow(
+                    label = stringResource(R.string.home_monitoring),
+                    value = stringResource(if (settings.enabled) R.string.home_enabled else R.string.home_disabled),
+                )
+            }
+        }
+
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp),
+            enabled = numberValid,
+            onClick = onManualSos,
+        ) {
+            Text(stringResource(R.string.home_manual_sos))
+        }
+    }
+}
+
+@Composable
+private fun EmergencyInfoRow(
+    label: String,
+    value: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GuardianSurfaceAlt, RoundedCornerShape(18.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            label,
+            color = GuardianMuted,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            value,
+            color = GuardianText,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OnboardingIntroScreen(
+    introStep: Int,
+    userName: String,
+    onLanguageSelected: (String) -> Unit,
+    onUserNameChange: (String) -> Unit,
+    onContinue: () -> Unit,
+    onStartOnboarding: () -> Unit,
+) {
+    val isLanguageStep = introStep == 0
+    val isOpenStep = introStep == 1
+    val isNameStep = introStep == 2
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .imePadding()
+            .padding(
+                horizontal = 20.dp,
+                vertical = if (!isNameStep) 18.dp else 10.dp,
+            ),
+        verticalArrangement = if (!isNameStep) Arrangement.Center else Arrangement.Top,
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = GuardianSurface),
+            shape = RoundedCornerShape(if (!isNameStep) 32.dp else 24.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(if (!isNameStep) 28.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(if (!isNameStep) 18.dp else 8.dp),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(if (!isNameStep) 74.dp else 44.dp)
+                        .background(if (isOpenStep) GuardianRedSoft else GuardianTealSoft, RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        when {
+                            isLanguageStep -> Icons.Rounded.Settings
+                            isOpenStep -> Icons.Rounded.Shield
+                            else -> Icons.Rounded.ContactPage
+                        },
+                        contentDescription = null,
+                        tint = if (isOpenStep) GuardianRed else GuardianTeal,
+                        modifier = Modifier.size(if (!isNameStep) 38.dp else 24.dp),
+                    )
+                }
+                Text(
+                    stringResource(
+                        when {
+                            isLanguageStep -> R.string.language_title
+                            isOpenStep -> R.string.onboarding_open_title
+                            else -> R.string.onboarding_name_title
+                        },
+                    ),
+                    style = if (!isNameStep) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = GuardianText,
+                )
+                Text(
+                    stringResource(
+                        when {
+                            isLanguageStep -> R.string.language_subtitle
+                            isOpenStep -> R.string.onboarding_open_subtitle
+                            else -> R.string.onboarding_name_subtitle
+                        },
+                    ),
+                    style = if (!isNameStep) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = GuardianRed,
+                )
+                if (isLanguageStep) {
+                    supportedLanguages.forEach { language ->
+                        Button(
+                            onClick = {
+                                onLanguageSelected(language.code)
+                                onContinue()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                        ) {
+                            Text(language.label)
+                        }
+                    }
+                }
+                if (isOpenStep) {
+                    Text(
+                        stringResource(R.string.onboarding_open_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = GuardianMuted,
+                    )
+                }
+
+                if (isNameStep) {
+                    OutlinedTextField(
+                        value = userName,
+                        onValueChange = onUserNameChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.onboarding_name_label)) },
+                        placeholder = { Text(stringResource(R.string.onboarding_name_placeholder)) },
+                        singleLine = true,
+                    )
+                }
+
+                Button(
+                    onClick = if (isOpenStep || isLanguageStep) onContinue else onStartOnboarding,
+                    enabled = !isNameStep || userName.isNotBlank(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                ) {
+                    Text(
+                        stringResource(if (isNameStep) R.string.onboarding_start else R.string.onboarding_continue),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SetupDoneScreen(
+    onViewDetails: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = GuardianSurface),
+            shape = RoundedCornerShape(32.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(74.dp)
+                        .background(GuardianTealSoft, RoundedCornerShape(24.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = GuardianTeal,
+                        modifier = Modifier.size(42.dp),
+                    )
+                }
+                Text(
+                    stringResource(R.string.setup_done_title),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Black,
+                    color = GuardianText,
+                )
+                Text(
+                    stringResource(R.string.setup_done_subtitle),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = GuardianTeal,
+                )
+                Text(
+                    stringResource(R.string.setup_done_body),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = GuardianMuted,
+                )
+                Button(
+                    onClick = onViewDetails,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp),
+                ) {
+                    Text(stringResource(R.string.setup_done_button))
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FirstRunOnboardingScreen(
@@ -516,15 +800,34 @@ private fun FirstRunOnboardingScreen(
     overlayPermission: Boolean,
     criticalPermissionsGranted: Boolean,
     requestPermissions: () -> Unit,
+    permissionNeedsSettings: Boolean,
+    openAppSettings: () -> Unit,
+    onLanguageSelected: (String) -> Unit,
     onFinishSetup: (SosSettings, () -> Unit) -> Unit,
 ) {
+    data class ContactAdvanceDialogState(
+        val title: String,
+        val message: String,
+        val nextStep: Int,
+    )
+
+    var draftUserName by rememberSaveable(currentSettings.userName) { mutableStateOf(currentSettings.userName) }
     var draftNumber by rememberSaveable(currentSettings.emergencyNumber) { mutableStateOf(currentSettings.emergencyNumber) }
     var draftWhatsappNumber by rememberSaveable(currentSettings.whatsappNumber) { mutableStateOf(currentSettings.whatsappNumber) }
     var draftVolume by rememberSaveable(currentSettings.sirenVolumeFraction) { mutableFloatStateOf(currentSettings.sirenVolumeFraction) }
     var draftBlinkMs by rememberSaveable(currentSettings.flashBlinkMs) { mutableFloatStateOf(currentSettings.flashBlinkMs.toFloat()) }
     var draftCooldownMs by rememberSaveable(currentSettings.cooldownMs) { mutableFloatStateOf(currentSettings.cooldownMs.toFloat()) }
-    var currentStep by rememberSaveable { mutableIntStateOf(0) }
-    var autoOpenedPermissionSteps by rememberSaveable { mutableStateOf("") }
+    var currentStep by rememberSaveable { mutableIntStateOf(1) }
+    var introStep by rememberSaveable { mutableIntStateOf(0) }
+    var showSetupDone by rememberSaveable { mutableStateOf(false) }
+    var contactAdvanceDialog by remember { mutableStateOf<ContactAdvanceDialogState?>(null) }
+    var showAccessibilityTutorialDialog by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(currentSettings.languageCode) {
+        if (currentSettings.languageCode.isBlank() && introStep != 0) {
+            introStep = 0
+        }
+    }
 
     val numberValid = PhoneNumberValidator.isValid(draftNumber)
     val whatsappValid = PhoneNumberValidator.isValid(draftWhatsappNumber)
@@ -533,31 +836,29 @@ private fun FirstRunOnboardingScreen(
     }
     val hasWhatsappStep = isWhatsappInstalled
     val whatsappReady = !hasWhatsappStep || whatsappValid
-    val setupReady = numberValid && whatsappReady && criticalPermissionsGranted && accessibilityEnabled && batteryIgnored && overlayPermission
-    val manufacturerName = remember {
-        Build.MANUFACTURER.orEmpty().lowercase()
-    }
+    val setupReady = draftUserName.isNotBlank() && numberValid && whatsappReady && criticalPermissionsGranted && accessibilityEnabled && batteryIgnored && overlayPermission
     val totalSteps = if (hasWhatsappStep) 8 else 7
-    val onboardingScrollState = rememberScrollState()
+    val visibleStep = currentStep.coerceAtLeast(1)
+    val visibleTotalSteps = totalSteps - 1
     val stepTitle = when (currentStep) {
-        0 -> "Welcome"
-        1 -> "Phone permissions"
-        2 -> "Accessibility"
-        3 -> "Display over apps"
-        4 -> "Battery protection"
-        5 -> "Call and SMS contact"
-        6 -> if (hasWhatsappStep) "WhatsApp contact" else "Alert settings"
-        else -> "Alert settings"
+        0 -> stringResource(R.string.onboarding_step_welcome)
+        1 -> stringResource(R.string.onboarding_step_phone_permissions)
+        2 -> stringResource(R.string.onboarding_step_accessibility)
+        3 -> stringResource(R.string.onboarding_step_display_over_apps)
+        4 -> stringResource(R.string.onboarding_step_battery_protection)
+        5 -> stringResource(R.string.onboarding_step_call_sms_contact)
+        6 -> if (hasWhatsappStep) stringResource(R.string.onboarding_step_whatsapp_contact) else stringResource(R.string.onboarding_step_alert_settings)
+        else -> stringResource(R.string.onboarding_step_alert_settings)
     }
     val stepSubtitle = when (currentStep) {
-        0 -> "Let's get started"
-        1 -> "Allow the emergency permissions"
-        2 -> "Turn on SOS Guardian"
-        3 -> "Let SOS show above other apps"
-        4 -> "Keep SOS running in the background"
-        5 -> "Choose the call and SMS emergency contact"
-        6 -> if (hasWhatsappStep) "Choose the WhatsApp emergency contact" else "Pick how the SOS alert behaves"
-        else -> "Pick how the SOS alert behaves"
+        0 -> stringResource(R.string.onboarding_subtitle_start)
+        1 -> stringResource(R.string.onboarding_subtitle_phone_permissions)
+        2 -> stringResource(R.string.onboarding_subtitle_accessibility)
+        3 -> stringResource(R.string.onboarding_subtitle_display_over_apps)
+        4 -> stringResource(R.string.onboarding_subtitle_battery)
+        5 -> stringResource(R.string.onboarding_subtitle_call_sms_contact)
+        6 -> if (hasWhatsappStep) stringResource(R.string.onboarding_subtitle_whatsapp_contact) else stringResource(R.string.onboarding_subtitle_alert_settings)
+        else -> stringResource(R.string.onboarding_subtitle_alert_settings)
     }
 
     val openAccessibilitySettings: () -> Unit = { openAccessibilityServiceSettings(context) }
@@ -585,6 +886,46 @@ private fun FirstRunOnboardingScreen(
         }
     }
 
+    val completedSettings = currentSettings.copy(
+        languageCode = currentSettings.languageCode.ifBlank { "en" },
+        userName = draftUserName.trim(),
+        emergencyNumber = draftNumber.trim(),
+        whatsappNumber = draftWhatsappNumber.trim(),
+        sirenVolumeFraction = draftVolume,
+        flashBlinkMs = draftBlinkMs.toLong(),
+        cooldownMs = draftCooldownMs.toLong(),
+        enabled = setupReady,
+        onboardingSeen = true,
+    )
+
+    if (introStep < 3) {
+        OnboardingIntroScreen(
+            introStep = introStep,
+            userName = draftUserName,
+            onLanguageSelected = onLanguageSelected,
+            onUserNameChange = { draftUserName = it },
+            onContinue = {
+                if (introStep != 0 || currentSettings.languageCode.isNotBlank()) {
+                    introStep += 1
+                }
+            },
+            onStartOnboarding = {
+                introStep = 3
+                currentStep = 1
+            },
+        )
+        return
+    }
+
+    if (showSetupDone) {
+        SetupDoneScreen(
+            onViewDetails = {
+                onFinishSetup(completedSettings) {}
+            },
+        )
+        return
+    }
+
     LaunchedEffect(
         currentStep,
         criticalPermissionsGranted,
@@ -604,31 +945,9 @@ private fun FirstRunOnboardingScreen(
         }
     }
 
-    LaunchedEffect(
-        currentStep,
-        criticalPermissionsGranted,
-        accessibilityEnabled,
-        overlayPermission,
-        batteryIgnored,
-    ) {
-        val shouldAutoOpen = when (currentStep) {
-            1 -> !criticalPermissionsGranted
-            2 -> false
-            3 -> !overlayPermission
-            4 -> !batteryIgnored
-            else -> false
-        }
-        if (!shouldAutoOpen) return@LaunchedEffect
-
-        val stepKey = "|$currentStep|"
-        if (autoOpenedPermissionSteps.contains(stepKey)) return@LaunchedEffect
-
-        autoOpenedPermissionSteps += stepKey
-        when (currentStep) {
-            1 -> requestPermissions()
-            2 -> openAccessibilitySettings()
-            3 -> openOverlaySettings()
-            4 -> openBatterySettings()
+    LaunchedEffect(currentStep, accessibilityEnabled) {
+        if (currentStep == 2 && !accessibilityEnabled) {
+            showAccessibilityTutorialDialog = true
         }
     }
 
@@ -643,31 +962,54 @@ private fun FirstRunOnboardingScreen(
     }
 
     val emergencyPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
-        uri?.let { draftNumber = pickContactPhone(context, it) ?: draftNumber }
+        uri?.let {
+            val phone = pickContactPhone(context, it) ?: draftNumber
+            draftNumber = phone
+                if (PhoneNumberValidator.isValid(phone)) {
+                contactAdvanceDialog = ContactAdvanceDialogState(
+                    title = context.getString(R.string.contact1_saved_title),
+                    message = if (hasWhatsappStep) {
+                        context.getString(R.string.contact1_saved_body_whatsapp_next)
+                    } else {
+                        context.getString(R.string.contact1_saved_body_final_next)
+                    },
+                    nextStep = if (hasWhatsappStep) 6 else totalSteps - 1,
+                )
+            }
+        }
     }
     val whatsappPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
-        uri?.let { draftWhatsappNumber = pickContactPhone(context, it) ?: draftWhatsappNumber }
+        uri?.let {
+            val phone = pickContactPhone(context, it) ?: draftWhatsappNumber
+            draftWhatsappNumber = phone
+                if (PhoneNumberValidator.isValid(phone)) {
+                contactAdvanceDialog = ContactAdvanceDialogState(
+                    title = context.getString(R.string.contact2_saved_title),
+                    message = context.getString(R.string.contact2_saved_body),
+                    nextStep = totalSteps - 1,
+                )
+            }
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(onboardingScrollState)
             .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7EF)),
-            shape = RoundedCornerShape(36.dp),
+            colors = CardDefaults.cardColors(containerColor = GuardianSurface),
+            shape = RoundedCornerShape(24.dp),
         ) {
             Column(
-                modifier = Modifier.padding(28.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Box(
                     modifier = Modifier
-                        .size(74.dp)
-                        .background(Color(0xFFFFE4C7), RoundedCornerShape(24.dp)),
+                        .size(48.dp)
+                        .background(GuardianRedSoft, RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -682,392 +1024,335 @@ private fun FirstRunOnboardingScreen(
                             else -> Icons.Rounded.Settings
                         },
                         contentDescription = null,
-                        tint = Color(0xFFB45309),
-                        modifier = Modifier.size(38.dp),
+                        tint = GuardianRed,
+                        modifier = Modifier.size(28.dp),
                     )
                 }
-                Text(stepTitle, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-                Text(stepSubtitle, style = MaterialTheme.typography.headlineMedium, color = Color(0xFF6B3E26), fontWeight = FontWeight.Bold)
+                Text(stepTitle, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = GuardianText)
+                Text(stepSubtitle, style = MaterialTheme.typography.titleMedium, color = GuardianRed, fontWeight = FontWeight.Bold)
                 Text(
                     when (currentStep) {
-                        0 -> "Before we begin, we will help you set up your app in a quick and simple way."
-                        1 -> "We will ask Android for the phone permissions needed for SOS."
-                        2 -> "This lets the app notice the volume-button trigger."
-                        3 -> "This lets the SOS screen appear on top when help is needed."
-                        4 -> "This stops Android from turning the protection off."
-                        5 -> "Choose the first emergency contact. This person receives the call and the SMS with location."
+                        0 -> stringResource(R.string.onboarding_body_exact_press)
+                        1 -> stringResource(R.string.onboarding_body_press_allow)
+                        2 -> stringResource(R.string.onboarding_body_accessibility)
+                        3 -> stringResource(R.string.onboarding_body_display)
+                        4 -> stringResource(R.string.onboarding_body_battery)
+                        5 -> stringResource(R.string.onboarding_body_choose_first_contact)
                         6 -> if (hasWhatsappStep) {
-                            "Choose the second emergency contact. This person receives the WhatsApp message, location, and image."
+                            stringResource(R.string.onboarding_body_choose_second_contact)
                         } else {
-                            "Set the siren, flash blink, and cooldown before opening the main screen."
+                            stringResource(R.string.onboarding_body_finish)
                         }
-                        else -> "Set the siren, flash blink, and cooldown before opening the main screen."
+                        else -> stringResource(R.string.onboarding_body_finish)
                     },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color(0xFF6B3E26),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GuardianMuted,
                 )
                 LinearProgressIndicator(
-                    progress = { (currentStep + 1) / totalSteps.toFloat() },
+                    progress = { visibleStep / visibleTotalSteps.toFloat() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(CircleShape),
-                    color = Color(0xFFB45309),
-                    trackColor = Color(0xFFFFE7D1),
+                    color = GuardianRed,
+                    trackColor = GuardianRedSoft,
                 )
                 Text(
-                    "Step ${currentStep + 1} of $totalSteps",
-                    color = Color(0xFF8A5A44),
-                    style = MaterialTheme.typography.titleMedium,
+                    stringResource(R.string.onboarding_step_count, visibleStep, visibleTotalSteps),
+                    color = GuardianMuted,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
         }
 
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center,
         ) {
             when (currentStep) {
                 0 -> OnboardingSectionCard(
-                    title = "Getting started",
-                    subtitle = "Quick setup",
+                    title = stringResource(R.string.onboarding_start_setup_title),
+                    subtitle = stringResource(R.string.onboarding_start_setup_subtitle),
                 ) {
-                    Text("We will set up the app with you", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall, color = Color(0xFF20120C))
-                    OnboardingChecklistItem("1", "Permission")
-                    OnboardingChecklistItem("2", "Choose contact emergency to call and SMS")
-                    OnboardingChecklistItem("3", "Choose contact emergency to WhatsApp")
-                    OnboardingChecklistItem("4", "Set the siren loudness")
-                    OnboardingChecklistItem("5", "Flash blink")
-                    OnboardingChecklistItem("6", "Cooldown duration")
+                    Button(
+                        onClick = { currentStep = 1 },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(58.dp),
+                    ) {
+                        Text(stringResource(R.string.onboarding_continue))
+                    }
                 }
 
                 1 -> OnboardingSectionCard(
-                    title = "Allow phone permissions",
-                    subtitle = "Android will open the permission popup for you.",
+                    title = stringResource(R.string.onboarding_allow_phone_title),
+                    subtitle = stringResource(R.string.onboarding_allow_phone_subtitle),
                 ) {
-                    GuidedPermissionStepCard(
-                        enabled = criticalPermissionsGranted,
-                        readyTitle = "Phone permissions are ready",
-                        readyBody = "Emergency calling, SMS, location, camera, and alerts are allowed.",
-                        pendingBody = "The app opens the Android permission popup for you.",
-                        whyItMatters = "This lets SOS call, text, get your location, and send alerts.",
-                        nextHint = "Tap Allow on each Android popup.",
-                        actionLabel = "Show permission popup again",
-                        onAction = requestPermissions,
+                    SingleActionStepButton(
+                        enabled = !criticalPermissionsGranted,
+                        done = criticalPermissionsGranted,
+                        label = when {
+                            criticalPermissionsGranted -> stringResource(R.string.onboarding_done)
+                            permissionNeedsSettings -> stringResource(R.string.onboarding_open_settings)
+                            else -> stringResource(R.string.onboarding_allow_permissions)
+                        },
+                        onClick = if (permissionNeedsSettings) openAppSettings else requestPermissions,
                     )
                 }
 
                 2 -> OnboardingSectionCard(
-                    title = "Turn on SOS Guardian in Accessibility",
-                    subtitle = "Follow these steps, then tap the button below.",
+                    title = stringResource(R.string.onboarding_accessibility_title),
+                    subtitle = stringResource(R.string.onboarding_accessibility_subtitle),
                 ) {
-                    AccessibilityGuidanceCard(
-                        enabled = accessibilityEnabled,
-                        manufacturerName = manufacturerName,
-                        onAction = openAccessibilitySettings,
+                    SingleActionStepButton(
+                        enabled = !accessibilityEnabled,
+                        done = accessibilityEnabled,
+                        label = if (accessibilityEnabled) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_guardian_screen),
+                        onClick = { showAccessibilityTutorialDialog = true },
                     )
                 }
 
                 3 -> OnboardingSectionCard(
-                    title = "Allow display over apps",
-                    subtitle = "We will open the display setting for you.",
+                    title = stringResource(R.string.onboarding_display_title),
+                    subtitle = stringResource(R.string.onboarding_display_subtitle),
                 ) {
-                    GuidedPermissionStepCard(
-                        enabled = overlayPermission,
-                        readyTitle = "Display over apps is ready",
-                        readyBody = "SOS can now appear above other apps.",
-                        pendingBody = "The app opens the right Android screen for you.",
-                        whyItMatters = "This lets the SOS screen show up quickly during an emergency.",
-                        nextHint = "Turn ON Allow display over other apps.",
-                        actionLabel = "Open display setting again",
-                        onAction = openOverlaySettings,
+                    SingleActionStepButton(
+                        enabled = !overlayPermission,
+                        done = overlayPermission,
+                        label = if (overlayPermission) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_display_permission),
+                        onClick = openOverlaySettings,
                     )
                 }
 
                 4 -> OnboardingSectionCard(
-                    title = "Remove battery limits",
-                    subtitle = "We will open the battery setting for you.",
+                    title = stringResource(R.string.onboarding_battery_title),
+                    subtitle = stringResource(R.string.onboarding_battery_subtitle),
                 ) {
-                    GuidedPermissionStepCard(
-                        enabled = batteryIgnored,
-                        readyTitle = "Battery setting is ready",
-                        readyBody = "Android is less likely to stop SOS in the background.",
-                        pendingBody = "The app opens the battery screen for you.",
-                        whyItMatters = "This helps SOS keep running in the background.",
-                        nextHint = "Allow SOS Guardian to ignore battery limits.",
-                        actionLabel = "Open battery setting again",
-                        onAction = openBatterySettings,
+                    SingleActionStepButton(
+                        enabled = !batteryIgnored,
+                        done = batteryIgnored,
+                        label = if (batteryIgnored) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_battery_screen),
+                        onClick = openBatterySettings,
                     )
                 }
 
                 5 -> OnboardingSectionCard(
-                    title = "Emergency contact 1",
-                    subtitle = "This contact receives the phone call and the SMS alert",
+                    title = stringResource(R.string.onboarding_contact1_title),
+                    subtitle = stringResource(R.string.onboarding_contact1_subtitle),
                 ) {
-                    Text(
-                        "Pick one person for the emergency call and SMS. You can tap the contact button or type the number.",
-                        color = Color(0xFF6B3E26),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    OutlinedTextField(
-                        value = draftNumber,
-                        onValueChange = { draftNumber = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Call and SMS emergency contact") },
-                        trailingIcon = {
-                            IconButton(onClick = { emergencyPicker.launch(null) }) {
-                                Icon(Icons.Rounded.ContactPage, contentDescription = "Pick contact")
-                            }
-                        },
-                        supportingText = {
-                            Text(
-                                if (numberValid) "Ready. This emergency contact will be called and will receive the SMS."
-                                else "Choose one valid phone number for the emergency call and SMS.",
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        isError = !numberValid && draftNumber.isNotBlank(),
-                        singleLine = true,
-                    )
                     Button(
                         onClick = { emergencyPicker.launch(null) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp),
+                            .height(56.dp),
                     ) {
-                        Text(if (numberValid) "Choose a different call and SMS contact" else "Choose call and SMS contact")
+                        Text(if (numberValid) stringResource(R.string.onboarding_choose_different_call_sms) else stringResource(R.string.onboarding_choose_call_sms))
+                    }
+                    if (numberValid) {
+                        Text(stringResource(R.string.onboarding_selected_value, draftNumber), color = GuardianTeal, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
                 6 -> if (hasWhatsappStep) OnboardingSectionCard(
-                    title = "Emergency contact 2",
-                    subtitle = "This contact receives the WhatsApp message, location, and image",
+                    title = stringResource(R.string.onboarding_contact2_title),
+                    subtitle = stringResource(R.string.onboarding_contact2_subtitle),
                 ) {
-                    Text(
-                        "Pick one person for the WhatsApp emergency alert. This should be a second emergency contact.",
-                        color = Color(0xFF6B3E26),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    OutlinedTextField(
-                        value = draftWhatsappNumber,
-                        onValueChange = { draftWhatsappNumber = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("WhatsApp emergency contact") },
-                        trailingIcon = {
-                            IconButton(onClick = { whatsappPicker.launch(null) }) {
-                                Icon(Icons.Rounded.ContactPage, contentDescription = "Pick contact")
-                            }
-                        },
-                        supportingText = {
-                            Text(
-                                if (whatsappValid) "Ready. This emergency contact will receive the WhatsApp alert."
-                                else "Choose one valid phone number for the WhatsApp emergency contact.",
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        isError = !whatsappValid && draftWhatsappNumber.isNotBlank(),
-                        singleLine = true,
-                    )
+                    if (numberValid) {
+                        OutlinedButton(
+                            onClick = {
+                                draftWhatsappNumber = draftNumber
+                                contactAdvanceDialog = ContactAdvanceDialogState(
+                                    title = context.getString(R.string.same_contact_title),
+                                    message = context.getString(R.string.same_contact_body),
+                                    nextStep = totalSteps - 1,
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                        ) {
+                            Text(stringResource(R.string.onboarding_use_same_contact))
+                        }
+                    }
                     Button(
                         onClick = { whatsappPicker.launch(null) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp),
+                            .height(56.dp),
                     ) {
-                        Text(if (whatsappValid) "Choose a different WhatsApp contact" else "Choose WhatsApp contact")
+                        Text(if (whatsappValid) stringResource(R.string.onboarding_choose_different_whatsapp) else stringResource(R.string.onboarding_choose_whatsapp))
+                    }
+                    if (whatsappValid) {
+                        Text(stringResource(R.string.onboarding_selected_value, draftWhatsappNumber), color = GuardianTeal, fontWeight = FontWeight.SemiBold)
                     }
                 } else OnboardingSectionCard(
-                    title = "Alert settings",
-                    subtitle = "Your SOS trigger is Volume Down + Volume Up",
+                    title = stringResource(R.string.onboarding_step_alert_settings),
+                    subtitle = stringResource(R.string.onboarding_alert_settings_subtitle),
                 ) {
-                    SettingSlider("Set the siren loudness", "${(draftVolume * 100).toInt()}%", draftVolume, 0.2f..1f) {
-                        draftVolume = it
-                    }
-                    SettingSlider("Flash blink", "${draftBlinkMs.toInt()} ms", draftBlinkMs, 150f..1000f) {
-                        draftBlinkMs = it
-                    }
-                    SettingSlider("Cooldown duration", "${draftCooldownMs.toInt()} ms", draftCooldownMs, 3000f..20000f) {
-                        draftCooldownMs = it
-                    }
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1DF)),
-                        shape = RoundedCornerShape(22.dp),
+                    Button(
+                        onClick = { showSetupDone = true },
+                        enabled = setupReady,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(58.dp),
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text("How to use SOS", fontWeight = FontWeight.Bold, color = Color(0xFF7C2D12))
-                            Text(
-                                "When you need help, press Volume Down + Volume Up together.",
-                                color = Color(0xFF6B3E26),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                "After onboarding ends, SOS Guardian will be ready in the background.",
-                                color = Color(0xFF6B3E26),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+                        Text(stringResource(R.string.onboarding_finish_setup))
                     }
                 }
 
                 else -> OnboardingSectionCard(
-                    title = "Alert settings",
-                    subtitle = "Your SOS trigger is Volume Down + Volume Up",
+                    title = stringResource(R.string.onboarding_step_alert_settings),
+                    subtitle = stringResource(R.string.onboarding_alert_settings_subtitle),
                 ) {
-                    SettingSlider("Set the siren loudness", "${(draftVolume * 100).toInt()}%", draftVolume, 0.2f..1f) {
-                        draftVolume = it
-                    }
-                    SettingSlider("Flash blink", "${draftBlinkMs.toInt()} ms", draftBlinkMs, 150f..1000f) {
-                        draftBlinkMs = it
-                    }
-                    SettingSlider("Cooldown duration", "${draftCooldownMs.toInt()} ms", draftCooldownMs, 3000f..20000f) {
-                        draftCooldownMs = it
-                    }
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1DF)),
-                        shape = RoundedCornerShape(22.dp),
+                    Button(
+                        onClick = { showSetupDone = true },
+                        enabled = setupReady,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(58.dp),
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text("How to use SOS", fontWeight = FontWeight.Bold, color = Color(0xFF7C2D12))
-                            Text(
-                                "When you need help, press Volume Down + Volume Up together.",
-                                color = Color(0xFF6B3E26),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                "After onboarding ends, SOS Guardian will be ready in the background.",
-                                color = Color(0xFF6B3E26),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+                        Text(stringResource(R.string.onboarding_finish_setup))
                     }
                 }
             }
         }
 
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E151A)),
-            shape = RoundedCornerShape(32.dp),
+    }
+
+    contactAdvanceDialog?.let { dialog ->
+        AlertDialog(
+            onDismissRequest = {
+                currentStep = dialog.nextStep
+                contactAdvanceDialog = null
+            },
+            title = { Text(dialog.title) },
+            text = { Text(dialog.message) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        currentStep = dialog.nextStep
+                        contactAdvanceDialog = null
+                    },
+                ) {
+                    Text(stringResource(R.string.onboarding_continue))
+                }
+            },
+        )
+    }
+
+    if (showAccessibilityTutorialDialog && !accessibilityEnabled) {
+        AlertDialog(
+            onDismissRequest = { showAccessibilityTutorialDialog = false },
+            title = {
+                Text(stringResource(R.string.onboarding_subtitle_accessibility))
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.accessibility_dialog_body),
+                        color = GuardianMuted,
+                    )
+                    PermissionHintCard(stringResource(R.string.accessibility_dialog_step1))
+                    PermissionHintCard(stringResource(R.string.accessibility_dialog_step2))
+                    PermissionHintCard(stringResource(R.string.accessibility_dialog_step3))
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showAccessibilityTutorialDialog = false
+                        openAccessibilitySettings()
+                    },
+                ) {
+                    Text(stringResource(R.string.onboarding_continue))
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showAccessibilityTutorialDialog = false },
+                ) {
+                    Text(stringResource(R.string.not_now))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AccessibilityTutorialCard(
+    stepNumber: String,
+    screenTitle: String,
+    actionText: String,
+    helperText: String,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = GuardianSurface),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(GuardianRed, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        stepNumber,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Text(
+                    screenTitle,
+                    color = GuardianText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(18.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    when (currentStep) {
-                        0 -> "Start the guided setup."
-                        1 -> if (criticalPermissionsGranted) "Phone permissions are ready." else "Allow the emergency permissions before continuing."
-                        2 -> if (accessibilityEnabled) "Accessibility is ready." else "Open Accessibility, tap SOS Guardian, then turn ON Use SOS Guardian."
-                        3 -> if (overlayPermission) "Display over apps is ready." else "Allow display over apps before continuing."
-                        4 -> if (batteryIgnored) "Battery protection is ready." else "Remove battery limits before continuing."
-                        5 -> if (numberValid) {
-                            "Emergency contact 1 is ready for call and SMS."
-                        } else {
-                            "Choose one valid emergency contact for the call and SMS before continuing."
-                        }
-                        6 -> if (hasWhatsappStep && whatsappReady) {
-                            "Emergency contact 2 is ready for WhatsApp."
-                        } else if (hasWhatsappStep) {
-                            "Choose one valid emergency contact for WhatsApp before continuing."
-                        } else if (setupReady) {
-                            "Setup is ready. Press Volume Down + Volume Up together when you need SOS."
-                        } else {
-                            "Complete the permissions and choose your emergency contact before finishing."
-                        }
-                        else -> if (setupReady) {
-                            "Setup is ready. Press Volume Down + Volume Up together when you need SOS."
-                        } else {
-                            "Complete the permissions and choose both emergency contacts before finishing."
-                        }
-                    },
-                    color = Color(0xFFFFDEC7),
+                    actionText,
+                    modifier = Modifier.weight(1f),
+                    color = GuardianRed,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
                 )
-                if (currentStep > 0) {
-                    OutlinedButton(
-                        onClick = { currentStep -= 1 },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                    ) {
-                        Text("Back")
-                    }
-                }
-                if (currentStep < totalSteps - 1) {
-                    Button(
-                        onClick = {
-                            when {
-                                currentStep == 1 && !criticalPermissionsGranted -> requestPermissions()
-                                currentStep == 2 && !accessibilityEnabled -> openAccessibilitySettings()
-                                currentStep == 3 && !overlayPermission -> openOverlaySettings()
-                                currentStep == 4 && !batteryIgnored -> openBatterySettings()
-                                currentStep == 5 && !numberValid -> emergencyPicker.launch(null)
-                                currentStep == 6 && hasWhatsappStep && !whatsappReady -> whatsappPicker.launch(null)
-                                else -> currentStep += 1
-                            }
-                        },
-                        enabled = when (currentStep) {
-                            0 -> true
-                            1, 2, 3, 4 -> true
-                            5 -> true
-                            6 -> true
-                            else -> false
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                    ) {
-                        Text(
-                            when (currentStep) {
-                                0 -> "Start setup"
-                                1 -> if (criticalPermissionsGranted) "Continue to accessibility" else "Open permission popup again"
-                                2 -> if (accessibilityEnabled) "Continue to display setting" else "Open Accessibility now"
-                                3 -> if (overlayPermission) "Continue to battery setting" else "Open display setting again"
-                                4 -> if (batteryIgnored) "Continue to contacts" else "Open battery setting again"
-                                5 -> if (numberValid) {
-                                    if (hasWhatsappStep) "Continue to WhatsApp contact" else "Go to alert settings"
-                                } else {
-                                    "Choose call and SMS contact"
-                                }
-                                6 -> if (hasWhatsappStep) {
-                                    if (whatsappReady) "Go to alert settings" else "Choose WhatsApp contact"
-                                } else {
-                                    "Next"
-                                }
-                                else -> "Next"
-                            },
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            onFinishSetup(
-                                currentSettings.copy(
-                                    emergencyNumber = draftNumber.trim(),
-                                    whatsappNumber = draftWhatsappNumber.trim(),
-                                    sirenVolumeFraction = draftVolume,
-                                    flashBlinkMs = draftBlinkMs.toLong(),
-                                    cooldownMs = draftCooldownMs.toLong(),
-                                    enabled = setupReady,
-                                    onboardingSeen = true,
-                                ),
-                            ) {}
-                        },
-                        enabled = setupReady,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                    ) {
-                        Text("Finish setup")
-                    }
+                Box(
+                    modifier = Modifier
+                        .background(GuardianRed, RoundedCornerShape(999.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.press_label),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
+            Text(
+                helperText,
+                color = GuardianMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }
@@ -1079,16 +1364,128 @@ private fun OnboardingSectionCard(
     content: @Composable () -> Unit,
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9F2)),
-        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(containerColor = GuardianSurface),
+        shape = RoundedCornerShape(28.dp),
     ) {
         Column(
             modifier = Modifier.padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-            Text(subtitle, color = Color(0xFF6B3E26), style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = GuardianText)
+            Text(subtitle, color = GuardianMuted, style = MaterialTheme.typography.bodyLarge)
             content()
+        }
+    }
+}
+
+@Composable
+private fun SingleActionStepButton(
+    enabled: Boolean,
+    done: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+    ) {
+        Text(label)
+    }
+    if (done) {
+        Text(
+            stringResource(R.string.completed_label),
+            color = GuardianTeal,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
+}
+
+@Composable
+private fun RuntimePermissionFlowCard(
+    enabled: Boolean,
+    needsSettings: Boolean,
+    readyTitle: String,
+    readyBody: String,
+    educationalTitle: String,
+    educationalBody: String,
+    deniedBody: String,
+    onAction: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) GuardianTealSoft else Color.White,
+        ),
+        shape = RoundedCornerShape(28.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(
+                            if (enabled) GuardianTeal else GuardianRed,
+                            CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (enabled) Icons.Rounded.CheckCircle else Icons.Rounded.Call,
+                        contentDescription = null,
+                        tint = Color.White,
+                    )
+                }
+                Text(
+                    if (enabled) readyTitle else educationalTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = GuardianText,
+                )
+            }
+
+            Text(
+                when {
+                    enabled -> readyBody
+                    needsSettings -> deniedBody
+                    else -> educationalBody
+                },
+                color = GuardianMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            if (!enabled) {
+                if (needsSettings) {
+                    PermissionHintCard(stringResource(R.string.permission_hint_open_settings))
+                } else {
+                    PermissionHintCard(stringResource(R.string.permission_hint_continue_allow))
+                }
+            }
+
+            Button(
+                onClick = if (needsSettings) onOpenSettings else onAction,
+                enabled = !enabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+            ) {
+                Text(
+                    when {
+                        enabled -> stringResource(R.string.this_step_done)
+                        needsSettings -> stringResource(R.string.onboarding_open_settings)
+                        else -> stringResource(R.string.onboarding_continue)
+                    },
+                )
+            }
         }
     }
 }
@@ -1099,20 +1496,19 @@ private fun GuidedPermissionStepCard(
     readyTitle: String,
     readyBody: String,
     pendingBody: String,
-    whyItMatters: String,
     nextHint: String,
     actionLabel: String,
     onAction: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) Color(0xFFD9FBE6) else Color.White,
+            containerColor = if (enabled) GuardianTealSoft else Color.White,
         ),
         shape = RoundedCornerShape(28.dp),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1122,7 +1518,7 @@ private fun GuidedPermissionStepCard(
                     modifier = Modifier
                         .size(42.dp)
                         .background(
-                            if (enabled) Color(0xFF16A34A) else Color(0xFFEA580C),
+                            if (enabled) GuardianTeal else GuardianRed,
                             CircleShape,
                         ),
                     contentAlignment = Alignment.Center,
@@ -1134,21 +1530,20 @@ private fun GuidedPermissionStepCard(
                     )
                 }
                 Text(
-                    if (enabled) readyTitle else "Action needed",
+                    if (enabled) readyTitle else stringResource(R.string.action_needed),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF20120C),
+                    color = GuardianText,
                 )
             }
 
             Text(
                 if (enabled) readyBody else pendingBody,
-                color = Color(0xFF6B3E26),
-                style = MaterialTheme.typography.bodyLarge,
+                color = GuardianMuted,
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             if (!enabled) {
-                PermissionWhyCard(whyItMatters)
                 PermissionHintCard(nextHint)
             }
 
@@ -1159,7 +1554,7 @@ private fun GuidedPermissionStepCard(
                     .fillMaxWidth()
                     .height(54.dp),
             ) {
-                Text(if (enabled) "This step is done" else actionLabel)
+                Text(if (enabled) stringResource(R.string.this_step_done) else actionLabel)
             }
         }
     }
@@ -1168,31 +1563,17 @@ private fun GuidedPermissionStepCard(
 @Composable
 private fun AccessibilityGuidanceCard(
     enabled: Boolean,
-    manufacturerName: String,
     onAction: () -> Unit,
 ) {
-    val brandHint = when {
-        "samsung" in manufacturerName -> "On Samsung, look for Installed apps, then SOS Guardian."
-        "xiaomi" in manufacturerName || "redmi" in manufacturerName || "poco" in manufacturerName ->
-            "On Xiaomi, Redmi, or Poco, the menu may be called Downloaded apps or Installed services."
-        "oppo" in manufacturerName || "realme" in manufacturerName || "oneplus" in manufacturerName ->
-            "On Oppo, Realme, or OnePlus, look for Downloaded apps or More downloaded services."
-        "huawei" in manufacturerName || "honor" in manufacturerName ->
-            "On Huawei or Honor, look for Installed services."
-        "google" in manufacturerName || "pixel" in manufacturerName ->
-            "On Pixel, open Downloaded apps, then SOS Guardian."
-        else -> "If you do not see Installed apps, look for Downloaded apps or Installed services."
-    }
-
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) Color(0xFFD9FBE6) else Color.White,
+            containerColor = if (enabled) GuardianTealSoft else Color.White,
         ),
         shape = RoundedCornerShape(28.dp),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1202,7 +1583,7 @@ private fun AccessibilityGuidanceCard(
                     modifier = Modifier
                         .size(42.dp)
                         .background(
-                            if (enabled) Color(0xFF16A34A) else Color(0xFFEA580C),
+                            if (enabled) GuardianTeal else GuardianRed,
                             CircleShape,
                         ),
                     contentAlignment = Alignment.Center,
@@ -1214,31 +1595,25 @@ private fun AccessibilityGuidanceCard(
                     )
                 }
                 Text(
-                    if (enabled) "Accessibility is ready" else "Tap this exact path",
+                    if (enabled) stringResource(R.string.accessibility_ready) else stringResource(R.string.accessibility_turn_on_switch),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF20120C),
+                    color = GuardianText,
                 )
             }
 
             Text(
                 if (enabled) {
-                    "SOS Guardian can now watch for the volume-button trigger."
+                    stringResource(R.string.accessibility_ready_body)
                 } else {
-                    "After the Android screen opens, follow this exact path."
+                    stringResource(R.string.accessibility_pending_body)
                 },
-                color = Color(0xFF6B3E26),
-                style = MaterialTheme.typography.bodyLarge,
+                color = GuardianMuted,
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             if (!enabled) {
-                PermissionHintCard("Do not turn on only the shortcut. Open the SOS Guardian service and turn the service ON.")
-                AccessibilityPathRow("Accessibility")
-                AccessibilityPathRow("Installed apps")
-                AccessibilityPathRow("SOS Guardian")
-                AccessibilityPathRow("Use SOS Guardian ON")
-                PermissionWhyCard("This lets the app react when both volume buttons are pressed together.")
-                PermissionHintCard(brandHint)
+                PermissionHintCard(stringResource(R.string.accessibility_pending_hint))
             }
 
             Button(
@@ -1248,9 +1623,112 @@ private fun AccessibilityGuidanceCard(
                     .fillMaxWidth()
                     .height(54.dp),
             ) {
-                Text(if (enabled) "This step is done" else "Open Accessibility settings")
+                Text(if (enabled) stringResource(R.string.this_step_done) else stringResource(R.string.onboarding_open_guardian_screen))
             }
         }
+    }
+}
+
+@Composable
+private fun AccessibilityServicePreviewCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = GuardianSurfaceAlt),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                stringResource(R.string.accessibility_preview_title),
+                fontWeight = FontWeight.Bold,
+                color = GuardianText,
+            )
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(24.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.accessibility_service_label),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = GuardianText,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(GuardianRedSoft, RoundedCornerShape(20.dp))
+                            .border(2.dp, GuardianRed, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.accessibility_preview_switch_title), fontWeight = FontWeight.Bold, color = GuardianRed)
+                            Text(stringResource(R.string.accessibility_preview_switch_body), color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(GuardianRed, RoundedCornerShape(999.dp))
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                        ) {
+                            Text(stringResource(R.string.press_here_label), color = Color.White, fontWeight = FontWeight.Black)
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.accessibility_preview_warning),
+                        color = GuardianRed,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Text(
+                            stringResource(R.string.accessibility_preview_look_first),
+                            color = GuardianRed,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimpleStepRow(
+    number: String,
+    text: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GuardianRedSoft, RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .background(GuardianRed, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(number, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+        }
+        Text(
+            text,
+            color = GuardianRed,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -1261,7 +1739,7 @@ private fun PermissionHintCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFFFEDD5), RoundedCornerShape(20.dp))
+            .background(GuardianSurfaceAlt, RoundedCornerShape(20.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1269,11 +1747,11 @@ private fun PermissionHintCard(
         Icon(
             Icons.Rounded.Settings,
             contentDescription = null,
-            tint = Color(0xFF9A3412),
+            tint = GuardianTeal,
         )
         Text(
             text,
-            color = Color(0xFF9A3412),
+            color = GuardianText,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -1287,7 +1765,7 @@ private fun AccessibilityPathRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFFFF1DF), RoundedCornerShape(18.dp))
+            .background(GuardianRedSoft, RoundedCornerShape(18.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1295,7 +1773,7 @@ private fun AccessibilityPathRow(
         Box(
             modifier = Modifier
                 .size(28.dp)
-                .background(Color(0xFFEA580C), CircleShape),
+                .background(GuardianRed, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1307,7 +1785,7 @@ private fun AccessibilityPathRow(
         }
         Text(
             text,
-            color = Color(0xFF7C2D12),
+            color = GuardianRed,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -1330,14 +1808,14 @@ private fun OnboardingChecklistItem(
         Box(
             modifier = Modifier
                 .size(34.dp)
-                .background(Color(0xFFEA580C), CircleShape),
+                .background(GuardianRed, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Text(number, color = Color.White, fontWeight = FontWeight.Bold)
         }
         Text(
             text,
-            color = Color(0xFF20120C),
+            color = GuardianText,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -1372,19 +1850,19 @@ private fun HeroCard(enabled: Boolean, runtimeMode: SosMode, onboardingComplete:
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    text = if (onboardingComplete) "System Protected" else "Action Required",
+                    text = if (onboardingComplete) stringResource(R.string.system_protected) else stringResource(R.string.action_required),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
                     color = contentColor
                 )
             }
             Text(
-                "Hold both volume buttons together. SOS Guardian will blast sound, flash the torch, call the first saved contact, and text your location to every listed contact.",
+                stringResource(R.string.hero_body),
                 style = MaterialTheme.typography.bodyLarge,
                 color = contentColor.copy(alpha = 0.8f)
             )
             Text(
-                if (enabled) "Status: armed (${runtimeMode.name.lowercase().replace('_', ' ')})" else "Status: not armed",
+                if (enabled) stringResource(R.string.status_armed, runtimeMode.name.lowercase().replace('_', ' ')) else stringResource(R.string.status_not_armed),
                 fontWeight = FontWeight.SemiBold,
                 color = if (onboardingComplete) Color(0xFFCCFBF1) else if (enabled) Color(0xFF115E59) else Color(0xFF9A3412),
             )
@@ -1733,24 +2211,24 @@ private fun GuidedSetupCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Easy setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Complete these steps in order. The next step opens after the previous one is done.", color = Color(0xFF6B3E26))
+            Text(stringResource(R.string.easy_setup_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.easy_setup_body), color = Color(0xFF6B3E26))
 
             GuidedStepButton(
                 number = "1",
-                title = "Allow phone permissions",
-                subtitle = "Call, SMS, camera, location, and notifications.",
+                title = stringResource(R.string.onboarding_allow_phone_title),
+                subtitle = stringResource(R.string.permission_summary_phone),
                 done = criticalPermissionsGranted,
                 locked = false,
                 onClick = onRequestPermissions,
             )
             GuidedStepButton(
                 number = "2",
-                title = "Turn on SOS Guardian",
+                title = stringResource(R.string.onboarding_subtitle_accessibility),
                 subtitle = if (accessibilityEnabled) {
-                    "Accessibility is on."
+                    stringResource(R.string.accessibility_is_on)
                 } else {
-                    "Tap here, then open Installed apps, choose SOS Guardian, and turn Use SOS Guardian ON."
+                    stringResource(R.string.accessibility_guided_subtitle)
                 },
                 done = accessibilityEnabled,
                 locked = !permissionsReady,
@@ -1761,23 +2239,23 @@ private fun GuidedSetupCard(
             }
             GuidedStepButton(
                 number = "3",
-                title = "Allow display over apps",
-                subtitle = "Lets the SOS screen appear above other apps.",
+                title = stringResource(R.string.onboarding_display_title),
+                subtitle = stringResource(R.string.permission_summary_overlay),
                 done = overlayPermission,
                 locked = !accessibilityReady,
                 onClick = onOpenOverlaySettings,
             )
             GuidedStepButton(
                 number = "4",
-                title = "Remove battery limits",
-                subtitle = "Stops Android from turning the protection off.",
+                title = stringResource(R.string.onboarding_battery_title),
+                subtitle = stringResource(R.string.permission_summary_battery),
                 done = batteryIgnored,
                 locked = !overlayReady,
                 onClick = onOpenPowerSettings,
             )
             if (batteryReady) {
                 Text(
-                    "All permission steps are complete.",
+                    stringResource(R.string.all_permission_steps_complete),
                     color = Color(0xFF166534),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
@@ -1817,7 +2295,7 @@ private fun GuidedStepButton(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                if (done) "OK" else number,
+                if (done) stringResource(R.string.ok_label) else number,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
             )
@@ -1830,7 +2308,7 @@ private fun GuidedStepButton(
                 color = if (locked) Color(0xFF6B7280) else Color(0xFF20120C),
             )
             Text(
-                if (locked) "Finish the previous step first." else subtitle,
+                if (locked) stringResource(R.string.finish_previous_step_first) else subtitle,
                 color = if (locked) Color(0xFF6B7280) else Color(0xFF6B3E26),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -1862,16 +2340,16 @@ private fun AccessibilityMiniHelp() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                "How to allow it",
+                stringResource(R.string.how_to_allow_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF9A3412),
             )
-            Text("1. Tap the orange Accessibility step above.", color = Color(0xFF7C2D12))
-            Text("2. Open Installed apps or Downloaded apps.", color = Color(0xFF7C2D12))
-            Text("3. Tap SOS Guardian.", color = Color(0xFF7C2D12))
-            Text("4. Turn Use SOS Guardian ON.", color = Color(0xFF7C2D12))
-            Text("5. If you see Allow or OK, tap it.", color = Color(0xFF7C2D12))
+            Text(stringResource(R.string.how_to_allow_step1), color = Color(0xFF7C2D12))
+            Text(stringResource(R.string.how_to_allow_step2), color = Color(0xFF7C2D12))
+            Text(stringResource(R.string.how_to_allow_step3), color = Color(0xFF7C2D12))
+            Text(stringResource(R.string.how_to_allow_step4), color = Color(0xFF7C2D12))
+            Text(stringResource(R.string.how_to_allow_step5), color = Color(0xFF7C2D12))
         }
     }
 }
@@ -1926,12 +2404,12 @@ private fun OnboardingProgressCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Onboarding Progress",
+                    stringResource(R.string.onboarding_progress_title),
                     color = Color.White,
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
-                    "$completedCount / 4 steps",
+                    stringResource(R.string.onboarding_progress_count, completedCount),
                     color = Color.White.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -1947,11 +2425,11 @@ private fun OnboardingProgressCard(
             )
             Text(
                 text = when (completedCount) {
-                    0 -> "Let's get you set up for safety."
-                    1 -> "Good start! Three more things to do."
-                    2 -> "Doing well! Two more steps."
-                    3 -> "Almost there! One final step."
-                    else -> "You're all set and protected."
+                    0 -> stringResource(R.string.onboarding_progress_0)
+                    1 -> stringResource(R.string.onboarding_progress_1)
+                    2 -> stringResource(R.string.onboarding_progress_2)
+                    3 -> stringResource(R.string.onboarding_progress_3)
+                    else -> stringResource(R.string.onboarding_progress_done)
                 },
                 color = Color.White.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall
@@ -1978,31 +2456,31 @@ private fun PermissionsCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Requirements", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.requirements_title), color = Color.White, style = MaterialTheme.typography.headlineSmall)
             
             PermissionRow(
-                label = "Turn on SOS Guardian", 
+                label = stringResource(R.string.onboarding_subtitle_accessibility),
                 complete = accessibilityEnabled, 
                 icon = Icons.Rounded.Security,
-                description = "Needed so the app can notice the volume-button trigger."
+                description = stringResource(R.string.requirement_accessibility_description)
             ) {
                 openAccessibilityServiceSettings(context)
             }
             
             PermissionRow(
-                label = "Allow phone permissions",
+                label = stringResource(R.string.onboarding_allow_phone_title),
                 complete = criticalPermissionsGranted, 
                 icon = Icons.Rounded.Call,
-                description = "Allow calling, texting, camera, location, and notifications."
+                description = stringResource(R.string.requirement_phone_description)
             ) {
                 onRequestPermissions()
             }
             
             PermissionRow(
-                label = "Remove battery limits", 
+                label = stringResource(R.string.onboarding_battery_title),
                 complete = batteryIgnored, 
                 icon = Icons.Rounded.NotificationsActive,
-                description = "Keeps SOS Guardian working in the background."
+                description = stringResource(R.string.requirement_battery_description)
             ) {
                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                     data = "package:${context.packageName}".toUri()
@@ -2017,10 +2495,10 @@ private fun PermissionsCard(
             }
 
             PermissionRow(
-                label = "Allow display over apps", 
+                label = stringResource(R.string.onboarding_display_title),
                 complete = overlayPermission, 
                 icon = Icons.Rounded.Layers,
-                description = "Lets the SOS screen appear on top when needed."
+                description = stringResource(R.string.requirement_overlay_description)
             ) {
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
                     data = "package:${context.packageName}".toUri()
@@ -2079,7 +2557,7 @@ private fun PermissionRow(
         if (complete) {
             Icon(
                 Icons.Rounded.CheckCircle,
-                contentDescription = "Completed",
+                contentDescription = stringResource(R.string.completed_label),
                 tint = Color(0xFF4ADE80),
                 modifier = Modifier.size(28.dp)
             )
@@ -2089,7 +2567,7 @@ private fun PermissionRow(
                     .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text("Setup", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.setup_label), color = Color.White, style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -2108,9 +2586,9 @@ private fun WarningCard() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.FlashOn, contentDescription = null)
                 Spacer(Modifier.width(10.dp))
-                Text("Device-specific warning", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.device_warning_title), fontWeight = FontWeight.Bold)
             }
-            Text("Android vendors differ. Some phones may not pass both volume-button events while locked. This app keeps a foreground monitoring mode as the fallback.")
+            Text(stringResource(R.string.device_warning_body))
         }
     }
 }
@@ -2156,12 +2634,12 @@ private fun ActiveSosScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Icon(Icons.Rounded.NotificationsActive, contentDescription = null, tint = Color(0xFFFFE6D5))
-                Text("SOS ACTIVE", style = MaterialTheme.typography.displaySmall, color = Color.White, fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.sos_active_title), style = MaterialTheme.typography.displaySmall, color = Color.White, fontWeight = FontWeight.Black)
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 Text(message, color = Color(0xFFFFF0E8))
-                Text("Call status: $callStatus", color = Color(0xFFFFD6BF))
-                Text("Location status: $locationStatus", color = Color(0xFFFFD6BF))
-                Button(onClick = onStop, modifier = Modifier.fillMaxWidth()) { Text("Stop SOS") }
+                Text(stringResource(R.string.call_status_value, callStatus), color = Color(0xFFFFD6BF))
+                Text(stringResource(R.string.location_status_value, locationStatus), color = Color(0xFFFFD6BF))
+                Button(onClick = onStop, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.stop_sos)) }
             }
         }
     }
@@ -2174,27 +2652,62 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
 }
 
 private fun openAccessibilityServiceSettings(context: Context) {
+    val componentName = ComponentName(context, SosAccessibilityService::class.java)
     val directIntent = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").apply {
         putExtra(
             Intent.EXTRA_COMPONENT_NAME,
-            ComponentName(context, SosAccessibilityService::class.java),
+            componentName,
         )
+        // Some settings apps respond better when the component is also provided as a string.
+        putExtra("component_name", componentName.flattenToString())
+        setPackage("com.android.settings")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val directIntentNoPackage = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").apply {
+        putExtra(Intent.EXTRA_COMPONENT_NAME, componentName)
+        putExtra("component_name", componentName.flattenToString())
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     val fallbackIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    val packageManager = context.packageManager
-    val intentToLaunch = if (directIntent.resolveActivity(packageManager) != null) {
-        directIntent
-    } else {
-        fallbackIntent
+    val directIntents = listOf(directIntent, directIntentNoPackage)
+    val openedDirectly = directIntents.any { intent ->
+        runCatching {
+            context.startActivity(intent)
+            true
+        }.getOrDefault(false)
     }
-
-    runCatching { context.startActivity(intentToLaunch) }.onFailure {
+    if (!openedDirectly) {
         context.startActivity(fallbackIntent)
     }
+}
+
+private fun openAppSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = "package:${context.packageName}".toUri()
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+private fun Context.localizedContext(languageCode: String): Context {
+    val safeLanguageCode = languageCode.ifBlank { return this }
+    val locale = Locale.forLanguageTag(safeLanguageCode)
+    Locale.setDefault(locale)
+    val configuration = Configuration(resources.configuration)
+    configuration.setLocale(locale)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        configuration.setLocales(LocaleList(locale))
+    }
+    return createConfigurationContext(configuration)
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 private fun isBatteryOptimizationIgnored(context: Context): Boolean {

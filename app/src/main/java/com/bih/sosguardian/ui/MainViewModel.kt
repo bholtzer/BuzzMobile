@@ -9,7 +9,6 @@ import com.bih.sosguardian.data.SosSettings
 import com.bih.sosguardian.data.StopReason
 import com.bih.sosguardian.data.TriggerSource
 import com.bih.sosguardian.domain.PhoneNumberValidator
-import com.bih.sosguardian.service.SosForegroundService
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -28,9 +27,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             appContainer.settingsStore.updateSettings { settings }
             appContainer.sosCoordinator.setArmed(settings.enabled)
             if (settings.enabled) {
-                SosForegroundService.Companion.start(getApplication())
+                appContainer.monitoringServiceController.start()
             } else {
-                SosForegroundService.Companion.stop(getApplication())
+                appContainer.monitoringServiceController.stop()
             }
         }
     }
@@ -45,9 +44,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             appContainer.settingsStore.updateSettings { it.copy(enabled = enabled) }
             appContainer.sosCoordinator.setArmed(enabled)
             if (enabled) {
-                SosForegroundService.Companion.start(getApplication())
+                appContainer.monitoringServiceController.start()
             } else {
-                SosForegroundService.Companion.stop(getApplication())
+                appContainer.monitoringServiceController.stop()
             }
         }
     }
@@ -69,6 +68,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun saveLanguage(languageCode: String) {
+        viewModelScope.launch {
+            appContainer.settingsStore.updateSettings { it.copy(languageCode = languageCode) }
+        }
+    }
+
     fun completeOnboarding(settings: SosSettings, onInvalidNumber: () -> Unit) {
         if (!PhoneNumberValidator.isValid(settings.emergencyNumber)) {
             onInvalidNumber()
@@ -79,9 +84,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             appContainer.settingsStore.updateSettings { completed }
             appContainer.sosCoordinator.setArmed(completed.enabled)
             if (completed.enabled) {
-                SosForegroundService.Companion.start(getApplication())
+                appContainer.monitoringServiceController.start()
             } else {
-                SosForegroundService.Companion.stop(getApplication())
+                appContainer.monitoringServiceController.stop()
             }
         }
     }

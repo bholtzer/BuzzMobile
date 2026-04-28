@@ -1,4 +1,4 @@
-package com.bih.sosguardian.domain
+package com.bih.sosguardian.data.device
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -11,16 +11,17 @@ import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import com.bih.sosguardian.domain.PhotoCapturer
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-class CameraHandler(private val context: Context) {
+class CameraHandler(private val context: Context) : PhotoCapturer {
     private val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
     @SuppressLint("MissingPermission")
-    fun capturePhoto(): File? {
+    override fun capturePhoto(): File? {
         val cameraId = try {
             cameraManager.cameraIdList.firstOrNull { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)

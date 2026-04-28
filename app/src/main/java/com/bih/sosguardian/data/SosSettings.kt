@@ -7,6 +7,8 @@ enum class TriggerType {
 }
 
 data class SosSettings(
+    val languageCode: String = "",
+    val userName: String = "",
     val emergencyNumber: String = "",
     val whatsappNumber: String = "",
     val enabled: Boolean = false,

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.bih.sosguardian.domain.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +20,10 @@ private val Context.dataStore by preferencesDataStore(name = "sos_settings")
 class SosSettingsStore(
     val context: Context,
     appScope: CoroutineScope,
-) {
+) : SettingsRepository {
     private object Keys {
+        val languageCode = stringPreferencesKey("language_code")
+        val userName = stringPreferencesKey("user_name")
         val emergencyNumber = stringPreferencesKey("emergency_number")
         val whatsappNumber = stringPreferencesKey("whatsapp_number")
         val enabled = booleanPreferencesKey("enabled")
@@ -34,7 +37,7 @@ class SosSettingsStore(
         val testMode = booleanPreferencesKey("test_mode")
     }
 
-    val settings: StateFlow<SosSettings> = context.dataStore.data
+    override val settings: StateFlow<SosSettings> = context.dataStore.data
         .map(::mapPreferences)
         .stateIn(
             scope = appScope,
@@ -42,9 +45,11 @@ class SosSettingsStore(
             initialValue = SosSettings(),
         )
 
-    suspend fun updateSettings(transform: (SosSettings) -> SosSettings) {
+    override suspend fun updateSettings(transform: (SosSettings) -> SosSettings) {
         context.dataStore.edit { prefs ->
             val updated = transform(mapPreferences(prefs))
+            prefs[Keys.languageCode] = updated.languageCode
+            prefs[Keys.userName] = updated.userName
             prefs[Keys.emergencyNumber] = updated.emergencyNumber
             prefs[Keys.whatsappNumber] = updated.whatsappNumber
             prefs[Keys.enabled] = updated.enabled
@@ -61,6 +66,8 @@ class SosSettingsStore(
 
     private fun mapPreferences(preferences: Preferences): SosSettings {
         return SosSettings(
+            languageCode = preferences[Keys.languageCode].orEmpty(),
+            userName = preferences[Keys.userName].orEmpty(),
             emergencyNumber = preferences[Keys.emergencyNumber].orEmpty(),
             whatsappNumber = preferences[Keys.whatsappNumber].orEmpty(),
             enabled = preferences[Keys.enabled] ?: false,
