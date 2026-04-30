@@ -818,16 +818,12 @@ private fun FirstRunOnboardingScreen(
     var draftBlinkMs by rememberSaveable(currentSettings.flashBlinkMs) { mutableFloatStateOf(currentSettings.flashBlinkMs.toFloat()) }
     var draftCooldownMs by rememberSaveable(currentSettings.cooldownMs) { mutableFloatStateOf(currentSettings.cooldownMs.toFloat()) }
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
-    var introStep by rememberSaveable { mutableIntStateOf(0) }
+    var introStep by rememberSaveable {
+        mutableIntStateOf(if (currentSettings.languageCode.isBlank()) 0 else 1)
+    }
     var showSetupDone by rememberSaveable { mutableStateOf(false) }
     var contactAdvanceDialog by remember { mutableStateOf<ContactAdvanceDialogState?>(null) }
     var showAccessibilityTutorialDialog by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(currentSettings.languageCode) {
-        if (currentSettings.languageCode.isBlank() && introStep != 0) {
-            introStep = 0
-        }
-    }
 
     val numberValid = PhoneNumberValidator.isValid(draftNumber)
     val whatsappValid = PhoneNumberValidator.isValid(draftWhatsappNumber)
@@ -904,11 +900,7 @@ private fun FirstRunOnboardingScreen(
             userName = draftUserName,
             onLanguageSelected = onLanguageSelected,
             onUserNameChange = { draftUserName = it },
-            onContinue = {
-                if (introStep != 0 || currentSettings.languageCode.isNotBlank()) {
-                    introStep += 1
-                }
-            },
+            onContinue = { introStep += 1 },
             onStartOnboarding = {
                 introStep = 3
                 currentStep = 1
@@ -1241,23 +1233,31 @@ private fun FirstRunOnboardingScreen(
         )
     }
 
+    val accessibilityDialogTitle = stringResource(R.string.onboarding_subtitle_accessibility)
+    val accessibilityDialogBody = stringResource(R.string.accessibility_dialog_body)
+    val accessibilityDialogStep1 = stringResource(R.string.accessibility_dialog_step1)
+    val accessibilityDialogStep2 = stringResource(R.string.accessibility_dialog_step2)
+    val accessibilityDialogStep3 = stringResource(R.string.accessibility_dialog_step3)
+    val accessibilityDialogContinue = stringResource(R.string.onboarding_continue)
+    val accessibilityDialogNotNow = stringResource(R.string.not_now)
+
     if (showAccessibilityTutorialDialog && !accessibilityEnabled) {
         AlertDialog(
             onDismissRequest = { showAccessibilityTutorialDialog = false },
             title = {
-                Text(stringResource(R.string.onboarding_subtitle_accessibility))
+                Text(accessibilityDialogTitle)
             },
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        stringResource(R.string.accessibility_dialog_body),
+                        accessibilityDialogBody,
                         color = GuardianMuted,
                     )
-                    PermissionHintCard(stringResource(R.string.accessibility_dialog_step1))
-                    PermissionHintCard(stringResource(R.string.accessibility_dialog_step2))
-                    PermissionHintCard(stringResource(R.string.accessibility_dialog_step3))
+                    PermissionHintCard(accessibilityDialogStep1)
+                    PermissionHintCard(accessibilityDialogStep2)
+                    PermissionHintCard(accessibilityDialogStep3)
                 }
             },
             confirmButton = {
@@ -1267,14 +1267,14 @@ private fun FirstRunOnboardingScreen(
                         openAccessibilitySettings()
                     },
                 ) {
-                    Text(stringResource(R.string.onboarding_continue))
+                    Text(accessibilityDialogContinue)
                 }
             },
             dismissButton = {
                 OutlinedButton(
                     onClick = { showAccessibilityTutorialDialog = false },
                 ) {
-                    Text(stringResource(R.string.not_now))
+                    Text(accessibilityDialogNotNow)
                 }
             },
         )
