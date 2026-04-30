@@ -128,6 +128,11 @@ private data class AppLanguage(
     val label: String,
 )
 
+private enum class LegalDocument {
+    PRIVACY_POLICY,
+    TERMS_CONDITIONS,
+}
+
 private val supportedLanguages = listOf(
     AppLanguage("en", "English"),
     AppLanguage("he", "עברית"),
@@ -153,7 +158,7 @@ fun SosApp(application: SosApplication) {
     val runtimeState by viewModel.runtimeState.collectAsState()
     val baseContext = LocalContext.current
     val activityResultRegistryOwner = checkNotNull(LocalActivityResultRegistryOwner.current) {
-        "SOS Guardian requires an ActivityResultRegistryOwner."
+        "Mango requires an ActivityResultRegistryOwner."
     }
     var pendingLanguageCode by rememberSaveable { mutableStateOf<String?>(null) }
     val effectiveLanguageCode = pendingLanguageCode ?: settings.languageCode
@@ -573,7 +578,107 @@ private fun EmergencyInformationScreen(
         ) {
             Text(stringResource(R.string.home_manual_sos))
         }
+
+        LegalLinks(modifier = Modifier.fillMaxWidth())
     }
+}
+
+@Composable
+private fun LegalLinks(
+    modifier: Modifier = Modifier,
+) {
+    var selectedDocument by rememberSaveable { mutableStateOf<LegalDocument?>(null) }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedButton(
+            onClick = { selectedDocument = LegalDocument.PRIVACY_POLICY },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.legal_privacy_policy))
+        }
+        OutlinedButton(
+            onClick = { selectedDocument = LegalDocument.TERMS_CONDITIONS },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.legal_terms_conditions))
+        }
+    }
+
+    selectedDocument?.let { document ->
+        LegalDocumentDialog(
+            document = document,
+            onDismiss = { selectedDocument = null },
+        )
+    }
+}
+
+@Composable
+private fun LegalDocumentDialog(
+    document: LegalDocument,
+    onDismiss: () -> Unit,
+) {
+    val title = stringResource(
+        when (document) {
+            LegalDocument.PRIVACY_POLICY -> R.string.legal_privacy_policy
+            LegalDocument.TERMS_CONDITIONS -> R.string.legal_terms_conditions
+        },
+    )
+    val close = stringResource(R.string.legal_close)
+    val paragraphs = when (document) {
+        LegalDocument.PRIVACY_POLICY -> listOf(
+            stringResource(R.string.privacy_policy_p1),
+            stringResource(R.string.privacy_policy_p2),
+            stringResource(R.string.privacy_policy_p3),
+            stringResource(R.string.privacy_policy_p4),
+            stringResource(R.string.privacy_policy_p5),
+            stringResource(R.string.privacy_policy_p6),
+            stringResource(R.string.privacy_policy_p7),
+        )
+        LegalDocument.TERMS_CONDITIONS -> listOf(
+            stringResource(R.string.terms_conditions_p1),
+            stringResource(R.string.terms_conditions_p2),
+            stringResource(R.string.terms_conditions_p3),
+            stringResource(R.string.terms_conditions_p4),
+            stringResource(R.string.terms_conditions_p5),
+            stringResource(R.string.terms_conditions_p6),
+            stringResource(R.string.terms_conditions_p7),
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                title,
+                fontWeight = FontWeight.Black,
+                color = GuardianText,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                paragraphs.forEach { paragraph ->
+                    Text(
+                        paragraph,
+                        color = GuardianMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text(close)
+            }
+        },
+    )
 }
 
 @Composable
@@ -722,6 +827,8 @@ private fun OnboardingIntroScreen(
                         stringResource(if (isNameStep) R.string.onboarding_start else R.string.onboarding_continue),
                     )
                 }
+
+                LegalLinks(modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -730,6 +837,7 @@ private fun OnboardingIntroScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SetupDoneScreen(
+    userName: String,
     onViewDetails: () -> Unit,
 ) {
     Column(
@@ -767,13 +875,13 @@ private fun SetupDoneScreen(
                     color = GuardianText,
                 )
                 Text(
-                    stringResource(R.string.setup_done_subtitle),
+                    stringResource(R.string.setup_done_subtitle, userName),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = GuardianTeal,
                 )
                 Text(
-                    stringResource(R.string.setup_done_body),
+                    stringResource(R.string.setup_done_body, userName),
                     style = MaterialTheme.typography.bodyLarge,
                     color = GuardianMuted,
                 )
@@ -785,6 +893,8 @@ private fun SetupDoneScreen(
                 ) {
                     Text(stringResource(R.string.setup_done_button))
                 }
+
+                LegalLinks(modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -833,6 +943,7 @@ private fun FirstRunOnboardingScreen(
     val hasWhatsappStep = isWhatsappInstalled
     val whatsappReady = !hasWhatsappStep || whatsappValid
     val setupReady = draftUserName.isNotBlank() && numberValid && whatsappReady && criticalPermissionsGranted && accessibilityEnabled && batteryIgnored && overlayPermission
+    val protectedPersonName = draftUserName.trim()
     val totalSteps = if (hasWhatsappStep) 8 else 7
     val visibleStep = currentStep.coerceAtLeast(1)
     val visibleTotalSteps = totalSteps - 1
@@ -911,6 +1022,7 @@ private fun FirstRunOnboardingScreen(
 
     if (showSetupDone) {
         SetupDoneScreen(
+            userName = protectedPersonName,
             onViewDetails = {
                 onFinishSetup(completedSettings) {}
             },
@@ -1079,7 +1191,7 @@ private fun FirstRunOnboardingScreen(
 
                 1 -> OnboardingSectionCard(
                     title = stringResource(R.string.onboarding_allow_phone_title),
-                    subtitle = stringResource(R.string.onboarding_allow_phone_subtitle),
+                    subtitle = stringResource(R.string.onboarding_allow_phone_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
                         enabled = !criticalPermissionsGranted,
@@ -1095,7 +1207,7 @@ private fun FirstRunOnboardingScreen(
 
                 2 -> OnboardingSectionCard(
                     title = stringResource(R.string.onboarding_accessibility_title),
-                    subtitle = stringResource(R.string.onboarding_accessibility_subtitle),
+                    subtitle = stringResource(R.string.onboarding_accessibility_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
                         enabled = !accessibilityEnabled,
@@ -1107,7 +1219,7 @@ private fun FirstRunOnboardingScreen(
 
                 3 -> OnboardingSectionCard(
                     title = stringResource(R.string.onboarding_display_title),
-                    subtitle = stringResource(R.string.onboarding_display_subtitle),
+                    subtitle = stringResource(R.string.onboarding_display_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
                         enabled = !overlayPermission,
@@ -1119,7 +1231,7 @@ private fun FirstRunOnboardingScreen(
 
                 4 -> OnboardingSectionCard(
                     title = stringResource(R.string.onboarding_battery_title),
-                    subtitle = stringResource(R.string.onboarding_battery_subtitle),
+                    subtitle = stringResource(R.string.onboarding_battery_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
                         enabled = !batteryIgnored,
@@ -1131,7 +1243,7 @@ private fun FirstRunOnboardingScreen(
 
                 5 -> OnboardingSectionCard(
                     title = stringResource(R.string.onboarding_contact1_title),
-                    subtitle = stringResource(R.string.onboarding_contact1_subtitle),
+                    subtitle = stringResource(R.string.onboarding_contact1_subtitle, protectedPersonName),
                 ) {
                     Button(
                         onClick = { emergencyPicker.launch(null) },
@@ -1148,7 +1260,7 @@ private fun FirstRunOnboardingScreen(
 
                 6 -> if (hasWhatsappStep) OnboardingSectionCard(
                     title = stringResource(R.string.onboarding_contact2_title),
-                    subtitle = stringResource(R.string.onboarding_contact2_subtitle),
+                    subtitle = stringResource(R.string.onboarding_contact2_subtitle, protectedPersonName),
                 ) {
                     if (numberValid) {
                         OutlinedButton(
@@ -1233,7 +1345,7 @@ private fun FirstRunOnboardingScreen(
         )
     }
 
-    val accessibilityDialogTitle = stringResource(R.string.onboarding_subtitle_accessibility)
+    val accessibilityDialogTitle = stringResource(R.string.accessibility_dialog_title, protectedPersonName)
     val accessibilityDialogBody = stringResource(R.string.accessibility_dialog_body)
     val accessibilityDialogStep1 = stringResource(R.string.accessibility_dialog_step1)
     val accessibilityDialogStep2 = stringResource(R.string.accessibility_dialog_step2)
@@ -1985,7 +2097,7 @@ private fun OnboardingWelcomePage() {
             background = Color(0xFFD9FBEF),
         )
         Text(
-            "Welcome to SOS Guardian",
+            "Welcome to Mango",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
             color = Color(0xFF20120C),
@@ -2056,7 +2168,7 @@ private fun OnboardingSetupPage() {
             title = "What to do next",
             lines = listOf(
                 "1. Allow the phone permissions.",
-                "2. Turn on SOS Guardian in Accessibility.",
+                "2. Turn on Mango in Accessibility.",
                 "3. Allow display over other apps.",
                 "4. Remove battery limits.",
                 "5. Add at least one emergency contact.",
@@ -2177,7 +2289,7 @@ private fun ShortcutWarningCard(context: Context) {
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    "In Accessibility settings, turn OFF the 'Shortcut' toggle for SOS Guardian but keep the service ON.",
+                    "In Accessibility settings, turn OFF the 'Shortcut' toggle for Mango but keep the service ON.",
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodySmall
                 )

@@ -31,7 +31,7 @@ class LocationShareHandler(
 
         val location = getBestLastKnownLocation() ?: return LocationShareStatus.LOCATION_UNAVAILABLE
         val message = buildString {
-            append("SOS Guardian alert. I may need help. ")
+            append("Mango alert. I may need help. ")
             append("My last known location: ")
             append("https://maps.google.com/?q=${location.latitude},${location.longitude}")
         }
