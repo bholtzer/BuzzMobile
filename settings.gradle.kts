@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SosGuardian"
+rootProject.name = "MangoSos"
 include(":app")

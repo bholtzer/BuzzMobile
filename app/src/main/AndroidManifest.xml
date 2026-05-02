@@ -30,7 +30,7 @@
         android:required="false" />
 
     <application
-        android:name="com.bih.sosguardian.SosApplication"
+        android:name="com.bih.mangosos.SosApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -38,7 +38,7 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_notification"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SosGuardian">
+        android:theme="@style/Theme.MangoSos">
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -51,7 +51,7 @@
         </provider>
 
         <activity
-            android:name="com.bih.sosguardian.MainActivity"
+            android:name="com.bih.mangosos.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:showWhenLocked="true"
@@ -64,7 +64,7 @@
         </activity>
 
         <service
-            android:name="com.bih.sosguardian.service.SosForegroundService"
+            android:name="com.bih.mangosos.service.SosForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
@@ -74,7 +74,7 @@
         </service>
 
         <service
-            android:name="com.bih.sosguardian.service.SosAccessibilityService"
+            android:name="com.bih.mangosos.service.SosAccessibilityService"
             android:enabled="true"
             android:exported="false"
             android:label="@string/accessibility_service_label"

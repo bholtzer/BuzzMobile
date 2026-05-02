@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Mango</string>
+    <string name="analytics_consent_title">עזור לשפר את Mango</string>
+    <string name="analytics_consent_body">שיתוף נתוני שימוש אנונימיים. אנחנו לא אוספים שמות, מספרי טלפון, אנשי קשר, מיקום, תמונות, שיחות או הודעות לצורכי אנליטיקה.</string>
     <string name="accessibility_service_label">שירות הפעלת Mango</string>
     <string name="accessibility_service_description">מזהה את לחיצת החירום בכפתורי הווליום כדי להפעיל פעולות חירום גם כשהמכשיר נעול או ברקע.</string>
     <string name="monitoring_channel_name">ניטור SOS</string>
@@ -23,7 +25,7 @@
     <string name="home_call_sms_contact">איש קשר לשיחה ו-SMS</string>
     <string name="home_whatsapp_contact">איש קשר ל-WhatsApp</string>
     <string name="home_trigger_method">הפעלת SOS</string>
-    <string name="home_trigger_body">לחץ יחד על ווליום למעלה + ווליום למטה.</string>
+    <string name="home_trigger_body">להחזיק ווליום למעלה + ווליום למטה יחד למשך 3 שניות.</string>
     <string name="home_siren">סירנה</string>
     <string name="home_flash">הבהוב פנס</string>
     <string name="home_cooldown">זמן המתנה</string>
@@ -64,13 +66,13 @@
     <string name="onboarding_start_setup_title">התחל הגדרה</string>
     <string name="onboarding_start_setup_subtitle">לחיצה אחת כדי להתחיל</string>
     <string name="onboarding_allow_phone_title">אפשר הרשאות טלפון</string>
-    <string name="onboarding_allow_phone_subtitle">לחץ כאן עכשיו. Android יפתח את חלון ההרשאות של SOS עבור %1$s.</string>
+    <string name="onboarding_allow_phone_subtitle">לחץ כאן עכשיו. Mango צריך הרשאת מצלמה כדי לצלם תמונה ולהקליט וידאו חירום של 30 שניות עבור %1$s.</string>
     <string name="onboarding_done">בוצע</string>
     <string name="onboarding_open_settings">פתח הגדרות</string>
     <string name="onboarding_allow_permissions">אפשר הרשאות</string>
     <string name="onboarding_accessibility_title">הפעל את Mango בנגישות</string>
     <string name="onboarding_accessibility_subtitle">%1$s, לחץ כאן עכשיו. מסך Mango ייפתח.</string>
-    <string name="onboarding_open_guardian_screen">פתח מסך Mango</string>
+    <string name="onboarding_open_Mango_screen">פתח מסך Mango</string>
     <string name="onboarding_display_title">אפשר הצגה מעל אפליקציות</string>
     <string name="onboarding_display_subtitle">%1$s, לחץ כאן עכשיו. מסך הרשאת ההצגה של SOS ייפתח.</string>
     <string name="onboarding_open_display_permission">פתח הרשאת הצגה</string>
@@ -87,10 +89,10 @@
     <string name="onboarding_use_same_contact">השתמש באותו איש קשר</string>
     <string name="onboarding_choose_different_whatsapp">בחר איש קשר WhatsApp אחר</string>
     <string name="onboarding_choose_whatsapp">בחר איש קשר WhatsApp</string>
-    <string name="onboarding_alert_settings_subtitle">הפעלת SOS היא ווליום למטה + ווליום למעלה.</string>
+    <string name="onboarding_alert_settings_subtitle">הפעלת SOS היא החזקת ווליום למטה + ווליום למעלה יחד למשך 3 שניות.</string>
     <string name="onboarding_finish_setup">סיום הגדרה</string>
     <string name="permission_dialog_title">אפשר הרשאות SOS</string>
-    <string name="permission_dialog_body">Mango צריך גישה לשיחות, SMS, מיקום, מצלמה והתראות כדי לשלוח עזרה במהירות בזמן חירום. לחץ המשך ואז אפשר במסכי Android.</string>
+    <string name="permission_dialog_body">Mango צריך גישה לשיחות, SMS, מיקום, מצלמה והתראות כדי לשלוח עזרה במהירות בזמן חירום. המצלמה משמשת לצילום תמונה ולהקלטת וידאו של 30 שניות כאשר SOS מופעל. לחץ המשך ואז אפשר.</string>
     <string name="not_now">לא עכשיו</string>
     <string name="readiness_title">מוכנות</string>
     <string name="readiness_body">אם המכשיר חוסם את כפתורי הווליום כשהמסך נעול, השאר את האפליקציה פעילה עם שירות בקדמת המסך.</string>
@@ -125,12 +127,12 @@
     <string name="accessibility_preview_look_first">חפש קודם את המתג העליון</string>
     <string name="system_protected">המערכת מוגנת</string>
     <string name="action_required">נדרשת פעולה</string>
-    <string name="hero_body">החזק את שני כפתורי הווליום יחד. Mango ישמיע סירנה, יהבהב בפנס, יתקשר לאיש הקשר הראשון וישלח את המיקום לאנשי הקשר.</string>
+    <string name="hero_body">החזק את שני כפתורי הווליום יחד למשך 3 שניות. Mango ישמיע סירנה, יהבהב בפנס, יתקשר לאיש הקשר הראשון וישלח את המיקום לאנשי הקשר.</string>
     <string name="status_armed">מצב: פעיל (%1$s)</string>
     <string name="status_not_armed">מצב: לא פעיל</string>
     <string name="easy_setup_title">הגדרה קלה</string>
     <string name="easy_setup_body">השלם את השלבים לפי הסדר. השלב הבא ייפתח אחרי שהקודם הושלם.</string>
-    <string name="permission_summary_phone">שיחות, SMS, מצלמה, מיקום והתראות.</string>
+    <string name="permission_summary_phone">שיחות, SMS, מיקום, התראות, תמונה ווידאו של 30 שניות.</string>
     <string name="accessibility_is_on">הנגישות פעילה.</string>
     <string name="accessibility_guided_subtitle">לחץ כאן, לחץ על אפליקציות מותקנות, בחר Mango והפעל אותו.</string>
     <string name="permission_summary_overlay">מאפשר למסך SOS להופיע מעל אפליקציות אחרות.</string>
@@ -163,11 +165,15 @@
     <string name="call_status_value">מצב שיחה: %1$s</string>
     <string name="location_status_value">מצב מיקום: %1$s</string>
     <string name="stop_sos">עצור SOS</string>
+    <string name="emergency_message_unknown_person">האדם המוגן</string>
+    <string name="emergency_message_location_line">מיקום: %1$s</string>
+    <string name="emergency_sms_message">התראת חירום מ-Mango: ייתכן ש-%1$s זקוק לעזרה. מיקום אחרון ידוע: %2$s</string>
+    <string name="emergency_whatsapp_message">התראת חירום מ-Mango: ייתכן ש-%1$s זקוק לעזרה עכשיו. %2$s</string>
     <string name="legal_privacy_policy">מדיניות פרטיות</string>
     <string name="legal_terms_conditions">תנאי שימוש</string>
     <string name="legal_close">סגור</string>
     <string name="privacy_policy_p1">Mango נועד לעזור לשלוח התראות חירום במהירות מהמכשיר הזה.</string>
-    <string name="privacy_policy_p2">האפליקציה עשויה להשתמש בשם האדם המוגן, אנשי קשר לחירום, איש קשר WhatsApp, מיקום, מצלמה, שיחות, SMS, התראות, הצגה מעל אפליקציות, סוללה והגדרות נגישות.</string>
+    <string name="privacy_policy_p2">האפליקציה עשויה להשתמש בשם האדם המוגן, אנשי קשר לחירום, איש קשר WhatsApp, מיקום, תמונת מצלמה, וידאו מצלמה של 30 שניות, שיחות, SMS, התראות, הצגה מעל אפליקציות, סוללה והגדרות נגישות.</string>
     <string name="privacy_policy_p3">המידע משמש להגדרת Mango, להפעלת פעולות חירום, להתקשרות או שליחת הודעות לאנשי הקשר שנבחרו, לשיתוף מיקום ולהצגת התראות דחופות.</string>
     <string name="privacy_policy_p4">ההגדרות נשמרות מקומית במכשיר. האפליקציה אינה מפעילה שרת ענן משלה עבור נתוני הגדרת החירום.</string>
     <string name="privacy_policy_p5">כאשר SOS מופעל, מידע עשוי להישלח לאנשי הקשר שבחרת דרך שיחות, SMS, WhatsApp או פעולות מערכת Android.</string>
@@ -180,4 +186,8 @@
     <string name="terms_conditions_p5">יש להשתמש באפליקציה רק בהסכמת האדם המוגן ובהסכמת אנשי הקשר שעשויים לקבל התראות חירום.</string>
     <string name="terms_conditions_p6">שיחות, SMS, נתונים סלולריים ושימוש באפליקציות צד שלישי עשויים ליצור חיובים מצד ספק הסלולר או נותני שירותים.</string>
     <string name="terms_conditions_p7">האפליקציה מסופקת כמו שהיא. כאשר נדרש סיוע מיידי, יש לפנות ישירות לשירותי החירום המקומיים.</string>
+    <string name="privacy_policy_p8">אם תפעיל אנליטיקה, Mango עשוי לאסוף אירועי שימוש אנונימיים כמו פתיחת האפליקציה, בחירת שפה, סיום onboarding ולחיצה על SOS ידני. האנליטיקה לא כוללת שמות, מספרי טלפון, אנשי קשר, מיקום, תמונות, שיחות, תוכן SMS או תוכן WhatsApp.</string>
+    <string name="privacy_policy_p9">כאשר SOS שולח התראת חירום ב-SMS או WhatsApp, Mango עשוי לשמור דוח חירום ב-Firebase. הדוח יכול לכלול את שם האדם המוגן, אנשי הקשר שנבחרו, איש קשר WhatsApp, מקור ההפעלה, מצב שיחה/SMS, מיקום אחרון, קישור למפה, תמונת SOS ווידאו SOS של 30 שניות אם צולמו.</string>
+    <string name="privacy_policy_contact">לשאלות או בקשות בנושא פרטיות, אפשר ליצור קשר בכתובת mangosos.support@gmail.com.</string>
+    <string name="terms_conditions_contact">לתמיכה, אפשר ליצור קשר בכתובת mangosos.support@gmail.com.</string>
 </resources>

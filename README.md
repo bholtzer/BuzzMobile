@@ -1,6 +1,6 @@
-# BuzzMobile
+# MangoSos
 
-BuzzMobile is an Android SOS app built with Kotlin, Jetpack Compose, and an MVVM-style structure.
+MangoSos is an Android SOS app built with Kotlin, Jetpack Compose, and an MVVM-style structure.
 
 ## Current Features
 
