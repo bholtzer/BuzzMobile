@@ -17,6 +17,7 @@ import android.os.PowerManager
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.result.contract.ActivityResultContract
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.rounded.ContactPage
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.Settings
@@ -64,8 +66,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
@@ -161,7 +166,7 @@ fun SosApp(application: SosApplication) {
     val runtimeState by viewModel.runtimeState.collectAsState()
     val baseContext = LocalContext.current
     val activityResultRegistryOwner = checkNotNull(LocalActivityResultRegistryOwner.current) {
-        "Mango requires an ActivityResultRegistryOwner."
+                "Mango Guardian requires an ActivityResultRegistryOwner."
     }
     var pendingLanguageCode by rememberSaveable { mutableStateOf<String?>(null) }
     val effectiveLanguageCode = pendingLanguageCode ?: settings.languageCode
@@ -314,6 +319,7 @@ fun SosApp(application: SosApplication) {
                         criticalPermissionsGranted = criticalPermissionsGranted,
                         requestPermissions = requestPermissionsWithModernFlow,
                         onManualSos = viewModel::triggerManualSos,
+                        onSaveSettings = viewModel::saveSettings,
                     )
                 }
             }
@@ -362,15 +368,18 @@ private fun SetupScreen(
     criticalPermissionsGranted: Boolean,
     requestPermissions: () -> Unit,
     onManualSos: () -> Unit,
+    onSaveSettings: (SosSettings, () -> Unit) -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val numberValid = PhoneNumberValidator.isValid(currentSettings.emergencyNumber)
 
     if (onboardingComplete) {
         EmergencyInformationScreen(
+            context = context,
             settings = currentSettings,
             runtimeMode = runtimeMode,
             onManualSos = onManualSos,
+            onSaveSettings = onSaveSettings,
         )
         return
     }
@@ -507,11 +516,16 @@ private fun isAppInstalled(context: Context, packageName: String): Boolean {
 
 @Composable
 private fun EmergencyInformationScreen(
+    context: Context,
     settings: SosSettings,
     runtimeMode: SosMode,
     onManualSos: () -> Unit,
+    onSaveSettings: (SosSettings, () -> Unit) -> Unit,
 ) {
     val numberValid = PhoneNumberValidator.isValid(settings.emergencyNumber)
+    var showEditDialog by rememberSaveable { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedDocument by rememberSaveable { mutableStateOf<LegalDocument?>(null) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -556,6 +570,41 @@ private fun EmergencyInformationScreen(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                Icons.Rounded.MoreVert,
+                                contentDescription = stringResource(R.string.home_menu),
+                                tint = MangoText,
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.home_edit_details)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    showEditDialog = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.legal_privacy_policy)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    selectedDocument = LegalDocument.PRIVACY_POLICY
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.legal_terms_conditions)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    selectedDocument = LegalDocument.TERMS_CONDITIONS
+                                },
+                            )
+                        }
+                    }
                 }
 
                 EmergencyInfoRow(
@@ -596,10 +645,6 @@ private fun EmergencyInformationScreen(
                     label = stringResource(R.string.home_cooldown),
                     value = "${settings.cooldownMs / 1000} sec",
                 )
-                EmergencyInfoRow(
-                    label = stringResource(R.string.home_monitoring),
-                    value = stringResource(if (settings.enabled) R.string.home_enabled else R.string.home_disabled),
-                )
             }
         }
 
@@ -613,8 +658,182 @@ private fun EmergencyInformationScreen(
             Text(stringResource(R.string.home_manual_sos))
         }
 
-        LegalLinks(modifier = Modifier.fillMaxWidth())
     }
+
+    if (showEditDialog) {
+        EditEmergencyDetailsDialog(
+            context = context,
+            settings = settings,
+            onDismiss = { showEditDialog = false },
+            onSave = { updatedSettings ->
+                onSaveSettings(updatedSettings) {}
+                showEditDialog = false
+            },
+        )
+    }
+
+    selectedDocument?.let { document ->
+        LegalDocumentDialog(
+            document = document,
+            onDismiss = { selectedDocument = null },
+        )
+    }
+}
+
+@Composable
+private fun EditEmergencyDetailsDialog(
+    context: Context,
+    settings: SosSettings,
+    onDismiss: () -> Unit,
+    onSave: (SosSettings) -> Unit,
+) {
+    var draftUserName by rememberSaveable(settings.userName) { mutableStateOf(settings.userName) }
+    var draftNumber by rememberSaveable(settings.emergencyNumber) { mutableStateOf(settings.emergencyNumber) }
+    var draftEmergencyContactName by rememberSaveable(settings.emergencyContactName) { mutableStateOf(settings.emergencyContactName) }
+    var draftWhatsappNumber by rememberSaveable(settings.whatsappNumber) { mutableStateOf(settings.whatsappNumber) }
+    var draftWhatsappContactName by rememberSaveable(settings.whatsappContactName) { mutableStateOf(settings.whatsappContactName) }
+    var showInvalidContact by rememberSaveable { mutableStateOf(false) }
+
+    val numberValid = PhoneNumberValidator.isValid(draftNumber)
+    val whatsappValid = draftWhatsappNumber.isBlank() || PhoneNumberValidator.isValid(draftWhatsappNumber)
+    val saveEnabled = draftUserName.isNotBlank() && numberValid && whatsappValid
+
+    val pickPhoneContract = remember {
+        object : ActivityResultContract<Void?, Uri?>() {
+            override fun createIntent(context: Context, input: Void?): Intent =
+                Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+
+            override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
+                if (resultCode == Activity.RESULT_OK) intent?.data else null
+        }
+    }
+
+    val emergencyPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
+        uri?.let {
+            val contact = pickContact(context, it) ?: PickedContact(draftEmergencyContactName, draftNumber)
+            draftNumber = contact.phone
+            draftEmergencyContactName = contact.name
+            showInvalidContact = !PhoneNumberValidator.isValid(contact.phone)
+        }
+    }
+    val whatsappPicker = rememberLauncherForActivityResult(pickPhoneContract) { uri ->
+        uri?.let {
+            val contact = pickContact(context, it) ?: PickedContact(draftWhatsappContactName, draftWhatsappNumber)
+            draftWhatsappNumber = contact.phone
+            draftWhatsappContactName = contact.name
+            showInvalidContact = !PhoneNumberValidator.isValid(contact.phone)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_details_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = draftUserName,
+                    onValueChange = { draftUserName = it },
+                    label = { Text(stringResource(R.string.onboarding_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = draftEmergencyContactName,
+                    onValueChange = { draftEmergencyContactName = it },
+                    label = { Text(stringResource(R.string.edit_call_sms_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = draftNumber,
+                    onValueChange = {
+                        draftNumber = it
+                        showInvalidContact = false
+                    },
+                    label = { Text(stringResource(R.string.edit_call_sms_phone)) },
+                    singleLine = true,
+                    isError = draftNumber.isNotBlank() && !numberValid,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedButton(
+                    onClick = { emergencyPicker.launch(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.onboarding_choose_call_sms))
+                }
+                OutlinedTextField(
+                    value = draftWhatsappContactName,
+                    onValueChange = { draftWhatsappContactName = it },
+                    label = { Text(stringResource(R.string.edit_whatsapp_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = draftWhatsappNumber,
+                    onValueChange = {
+                        draftWhatsappNumber = it
+                        showInvalidContact = false
+                    },
+                    label = { Text(stringResource(R.string.edit_whatsapp_phone)) },
+                    singleLine = true,
+                    isError = draftWhatsappNumber.isNotBlank() && !whatsappValid,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            draftWhatsappNumber = draftNumber
+                            draftWhatsappContactName = draftEmergencyContactName
+                            showInvalidContact = !numberValid
+                        },
+                        enabled = numberValid,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.onboarding_use_same_contact))
+                    }
+                    OutlinedButton(
+                        onClick = { whatsappPicker.launch(null) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.onboarding_choose_whatsapp))
+                    }
+                }
+                if (showInvalidContact || !saveEnabled) {
+                    Text(
+                        stringResource(R.string.edit_invalid_contact),
+                        color = MangoRed,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = saveEnabled,
+                onClick = {
+                    onSave(
+                        settings.copy(
+                            userName = draftUserName.trim(),
+                            emergencyNumber = draftNumber.trim(),
+                            emergencyContactName = draftEmergencyContactName.trim(),
+                            whatsappNumber = draftWhatsappNumber.trim(),
+                            whatsappContactName = draftWhatsappContactName.trim(),
+                        ),
+                    )
+                },
+            ) {
+                Text(stringResource(R.string.edit_save_changes))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(stringResource(R.string.not_now))
+            }
+        },
+    )
 }
 
 @Composable
@@ -909,7 +1128,9 @@ private fun OnboardingIntroScreen(
                     )
                 }
 
-                LegalLinks(modifier = Modifier.fillMaxWidth())
+                if (isLanguageStep) {
+                    LegalLinks(modifier = Modifier.fillMaxWidth())
+                }
             }
         }
     }
@@ -1016,6 +1237,7 @@ private fun FirstRunOnboardingScreen(
         mutableIntStateOf(if (currentSettings.languageCode.isBlank()) 0 else 1)
     }
     var showSetupDone by rememberSaveable { mutableStateOf(false) }
+    var pauseAutoAdvance by rememberSaveable { mutableStateOf(false) }
     var contactAdvanceDialog by remember { mutableStateOf<ContactAdvanceDialogState?>(null) }
     var showAccessibilityTutorialDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -1091,6 +1313,50 @@ private fun FirstRunOnboardingScreen(
         onboardingSeen = true,
     )
 
+    val goToNextStep: () -> Unit = {
+        pauseAutoAdvance = false
+        currentStep = when (currentStep) {
+            1 -> 2
+            2 -> 3
+            3 -> 4
+            4 -> 5
+            5 -> if (hasWhatsappStep) 6 else totalSteps - 1
+            6 -> totalSteps - 1
+            else -> currentStep
+        }
+    }
+
+    BackHandler(
+        enabled = introStep > 0 ||
+            showSetupDone ||
+            contactAdvanceDialog != null ||
+            showAccessibilityTutorialDialog ||
+            (introStep >= 3 && currentStep > 1),
+    ) {
+        when {
+            contactAdvanceDialog != null -> contactAdvanceDialog = null
+            showAccessibilityTutorialDialog -> showAccessibilityTutorialDialog = false
+            showSetupDone -> {
+                showSetupDone = false
+                currentStep = totalSteps - 1
+                pauseAutoAdvance = true
+            }
+            introStep in 1..2 -> introStep -= 1
+            introStep >= 3 && currentStep > 1 -> {
+                currentStep = when {
+                    currentStep == totalSteps - 1 && hasWhatsappStep -> 6
+                    currentStep == totalSteps - 1 -> 5
+                    else -> currentStep - 1
+                }
+                pauseAutoAdvance = true
+            }
+            introStep >= 3 -> {
+                introStep = 2
+                pauseAutoAdvance = true
+            }
+        }
+    }
+
     if (introStep < 3) {
         OnboardingIntroScreen(
             introStep = introStep,
@@ -1126,6 +1392,7 @@ private fun FirstRunOnboardingScreen(
         batteryIgnored,
     ) {
         val nextStep = when {
+            pauseAutoAdvance -> null
             currentStep == 1 && criticalPermissionsGranted -> 2
             currentStep == 2 && accessibilityEnabled -> 3
             currentStep == 3 && overlayPermission -> 4
@@ -1286,14 +1553,18 @@ private fun FirstRunOnboardingScreen(
                     subtitle = stringResource(R.string.onboarding_allow_phone_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
-                        enabled = !criticalPermissionsGranted,
+                        enabled = true,
                         done = criticalPermissionsGranted,
                         label = when {
                             criticalPermissionsGranted -> stringResource(R.string.onboarding_done)
                             permissionNeedsSettings -> stringResource(R.string.onboarding_open_settings)
                             else -> stringResource(R.string.onboarding_allow_permissions)
                         },
-                        onClick = if (permissionNeedsSettings) openAppSettings else requestPermissions,
+                        onClick = when {
+                            criticalPermissionsGranted -> goToNextStep
+                            permissionNeedsSettings -> openAppSettings
+                            else -> requestPermissions
+                        },
                     )
                 }
 
@@ -1302,10 +1573,10 @@ private fun FirstRunOnboardingScreen(
                     subtitle = stringResource(R.string.onboarding_accessibility_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
-                        enabled = !accessibilityEnabled,
+                        enabled = true,
                         done = accessibilityEnabled,
                         label = if (accessibilityEnabled) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_Mango_screen),
-                        onClick = { showAccessibilityTutorialDialog = true },
+                        onClick = if (accessibilityEnabled) goToNextStep else ({ showAccessibilityTutorialDialog = true }),
                     )
                 }
 
@@ -1314,10 +1585,10 @@ private fun FirstRunOnboardingScreen(
                     subtitle = stringResource(R.string.onboarding_display_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
-                        enabled = !overlayPermission,
+                        enabled = true,
                         done = overlayPermission,
                         label = if (overlayPermission) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_display_permission),
-                        onClick = openOverlaySettings,
+                        onClick = if (overlayPermission) goToNextStep else openOverlaySettings,
                     )
                 }
 
@@ -1326,10 +1597,10 @@ private fun FirstRunOnboardingScreen(
                     subtitle = stringResource(R.string.onboarding_battery_subtitle, protectedPersonName),
                 ) {
                     SingleActionStepButton(
-                        enabled = !batteryIgnored,
+                        enabled = true,
                         done = batteryIgnored,
                         label = if (batteryIgnored) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_battery_screen),
-                        onClick = openBatterySettings,
+                        onClick = if (batteryIgnored) goToNextStep else openBatterySettings,
                     )
                 }
 
@@ -2212,7 +2483,7 @@ private fun OnboardingWelcomePage() {
             background = Color(0xFFD9FBEF),
         )
         Text(
-            "Welcome to Mango",
+            "Welcome to Mango Guardian",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
             color = Color(0xFF20120C),
@@ -2283,7 +2554,7 @@ private fun OnboardingSetupPage() {
             title = "What to do next",
             lines = listOf(
                 "1. Allow the phone permissions.",
-                "2. Turn on Mango in Accessibility.",
+                "2. Turn on Mango Guardian in Accessibility.",
                 "3. Allow display over other apps.",
                 "4. Remove battery limits.",
                 "5. Add at least one emergency contact.",
@@ -2404,7 +2675,7 @@ private fun ShortcutWarningCard(context: Context) {
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    "In Accessibility settings, turn OFF the 'Shortcut' toggle for Mango but keep the service ON.",
+                    "In Accessibility settings, turn OFF the 'Shortcut' toggle for Mango Guardian but keep the service ON.",
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodySmall
                 )
