@@ -25,7 +25,7 @@
     <string name="home_call_sms_contact">Call and SMS contact</string>
     <string name="home_whatsapp_contact">WhatsApp contact</string>
     <string name="home_trigger_method">SOS trigger</string>
-    <string name="home_trigger_body">Hold Volume Up + Volume Down together for 3 seconds.</string>
+    <string name="home_trigger_body">Hold Volume Up + Volume Down together for 2 seconds, then release.</string>
     <string name="home_siren">Siren</string>
     <string name="home_flash">Flash blink</string>
     <string name="home_cooldown">Cooldown</string>
@@ -43,6 +43,9 @@
     <string name="edit_invalid_contact">Enter a name and a valid call/SMS contact. WhatsApp is optional, but must be valid if used.</string>
     <string name="home_manual_sos">Manual SOS</string>
     <string name="home_missing">Not set</string>
+    <string name="accessibility_off_title">Mango Guardian is not fully active</string>
+    <string name="accessibility_off_body">Accessibility is off. Volume-button trigger and automatic WhatsApp send will not work. Manual SOS can still open WhatsApp, but you may need to press Send yourself.</string>
+    <string name="accessibility_off_button">Turn on Accessibility</string>
     <string name="setup_done_title">Setup complete</string>
     <string name="setup_done_subtitle">%1$s, Mango Guardian is ready.</string>
     <string name="setup_done_body">%1$s, press the button below to see the SOS details.</string>
@@ -98,7 +101,7 @@
     <string name="onboarding_use_same_contact">Use the same contact as above</string>
     <string name="onboarding_choose_different_whatsapp">Choose a different WhatsApp contact</string>
     <string name="onboarding_choose_whatsapp">Choose WhatsApp contact</string>
-    <string name="onboarding_alert_settings_subtitle">Your SOS trigger is holding Volume Down + Volume Up together for 3 seconds.</string>
+    <string name="onboarding_alert_settings_subtitle">Your SOS trigger is holding Volume Down + Volume Up together for 2 seconds, then releasing.</string>
     <string name="onboarding_finish_setup">Finish setup</string>
     <string name="permission_dialog_title">Allow SOS permissions</string>
     <string name="permission_dialog_body">Mango Guardian needs calling, SMS, location, camera, and notification access so it can send help quickly during an emergency. The camera is used to take a photo and record a 30-second video when SOS is triggered. Press Continue, then press Allow on the Android screens.</string>
@@ -136,7 +139,7 @@
     <string name="accessibility_preview_look_first">Look for this top switch first</string>
     <string name="system_protected">System Protected</string>
     <string name="action_required">Action Required</string>
-    <string name="hero_body">Hold both volume buttons together for 3 seconds. Mango Guardian will blast sound, flash the torch, call the first saved contact, and text your location to every listed contact.</string>
+    <string name="hero_body">Hold both volume buttons together for 2 seconds, then release. Mango Guardian will blast sound, flash the torch, call the first saved contact, and text your location to every listed contact.</string>
     <string name="status_armed">Status: armed (%1$s)</string>
     <string name="status_not_armed">Status: not armed</string>
     <string name="easy_setup_title">Easy setup</string>
@@ -178,6 +181,9 @@
     <string name="emergency_message_location_line">Location: %1$s</string>
     <string name="emergency_sms_message">Mango Guardian emergency alert: %1$s may need help. Last known location: %2$s</string>
     <string name="emergency_whatsapp_message">Mango Guardian emergency alert: %1$s may need help now.%2$s</string>
+    <string name="toast_sms_sent">SMS message sent.</string>
+    <string name="toast_whatsapp_sent">WhatsApp message sent.</string>
+    <string name="toast_whatsapp_manual_send_needed">WhatsApp opened. Press Send manually because Accessibility is off.</string>
     <string name="legal_privacy_policy">Privacy Policy</string>
     <string name="legal_terms_conditions">Terms &amp; Conditions</string>
     <string name="legal_close">Close</string>

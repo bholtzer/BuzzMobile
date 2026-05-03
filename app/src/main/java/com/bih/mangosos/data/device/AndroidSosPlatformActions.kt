@@ -2,18 +2,26 @@ package com.bih.mangosos.data.device
 
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
+import android.text.TextUtils
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.bih.mangosos.MainActivity
+import com.bih.mangosos.R
 import com.bih.mangosos.domain.SosLocation
 import com.bih.mangosos.domain.SosPlatformActions
+import com.bih.mangosos.service.SosAccessibilityService
 import com.bih.mangosos.service.SosForegroundService
 import java.io.File
 
@@ -91,6 +99,9 @@ class AndroidSosPlatformActions(
 
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         try {
+            if (!isAccessibilityServiceEnabled()) {
+                showToast(R.string.toast_whatsapp_manual_send_needed)
+            }
             context.startActivity(intent)
         } catch (e: Exception) {
             Log.e("AndroidSosPlatform", "Failed to launch WhatsApp", e)
@@ -123,6 +134,28 @@ class AndroidSosPlatformActions(
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val expectedService = ComponentName(context, SosAccessibilityService::class.java).flattenToString()
+        val enabledServices = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        ) ?: return false
+        val splitter = TextUtils.SimpleStringSplitter(':')
+        splitter.setString(enabledServices)
+        for (service in splitter) {
+            if (service.equals(expectedService, ignoreCase = true)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun showToast(messageRes: Int) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(context, context.getString(messageRes), Toast.LENGTH_LONG).show()
         }
     }
 }

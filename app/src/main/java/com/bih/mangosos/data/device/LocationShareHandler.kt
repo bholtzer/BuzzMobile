@@ -5,8 +5,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.os.Handler
+import android.os.Looper
 import android.telephony.SmsManager
+import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.bih.mangosos.R
 import com.bih.mangosos.data.LocationShareStatus
 import com.bih.mangosos.domain.LocationMessenger
 import com.bih.mangosos.domain.PhoneNumberValidator
@@ -44,6 +48,7 @@ class LocationShareHandler(
             contacts.forEach { number ->
                 smsManager.sendTextMessage(number, null, message, null, null)
             }
+            showToast(R.string.toast_sms_sent)
             LocationShareStatus.SENT
         } catch (_: Exception) {
             LocationShareStatus.FAILED
@@ -70,5 +75,11 @@ class LocationShareHandler(
 
     private fun hasPermission(permission: String): Boolean {
         return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun showToast(messageRes: Int) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(context, context.getString(messageRes), Toast.LENGTH_SHORT).show()
+        }
     }
 }

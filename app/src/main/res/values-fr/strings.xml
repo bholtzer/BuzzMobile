@@ -1,4 +1,10 @@
 <resources>
+    <string name="accessibility_off_title">Mango Guardian n’est pas entièrement actif</string>
+    <string name="accessibility_off_body">L’accessibilité est désactivée. Le déclencheur par boutons de volume et l’envoi automatique WhatsApp ne fonctionneront pas. Le SOS manuel peut encore ouvrir WhatsApp, mais vous devrez peut-être appuyer sur Envoyer.</string>
+    <string name="accessibility_off_button">Activer l’accessibilité</string>
+    <string name="toast_sms_sent">SMS envoyé.</string>
+    <string name="toast_whatsapp_sent">Message WhatsApp envoyé.</string>
+    <string name="toast_whatsapp_manual_send_needed">WhatsApp est ouvert. Appuyez sur Envoyer manuellement car l’accessibilité est désactivée.</string>
     <string name="app_name">Mango Guardian</string>
     <string name="accessibility_service_label">Service de déclenchement Mango Guardian</string>
     <string name="accessibility_service_description">Détecte la combinaison des boutons de volume pour lancer les actions d’urgence même lorsque l’appareil est verrouillé ou en arrière-plan.</string>
@@ -25,7 +31,7 @@
     <string name="home_call_sms_contact">Contact appel et SMS</string>
     <string name="home_whatsapp_contact">Contact WhatsApp</string>
     <string name="home_trigger_method">Déclencheur SOS</string>
-    <string name="home_trigger_body">Maintenez Volume haut + Volume bas ensemble pendant 3 secondes.</string>
+    <string name="home_trigger_body">Maintenez Volume haut + Volume bas ensemble pendant 2 secondes, puis relâchez.</string>
     <string name="home_siren">Sirène</string>
     <string name="home_flash">Clignotement du flash</string>
     <string name="home_cooldown">Temps d’attente</string>
@@ -98,7 +104,7 @@
     <string name="onboarding_use_same_contact">Utiliser le même contact</string>
     <string name="onboarding_choose_different_whatsapp">Choisir un autre contact WhatsApp</string>
     <string name="onboarding_choose_whatsapp">Choisir le contact WhatsApp</string>
-    <string name="onboarding_alert_settings_subtitle">Le déclencheur SOS consiste a maintenir Volume bas + Volume haut ensemble pendant 3 secondes.</string>
+    <string name="onboarding_alert_settings_subtitle">Le déclencheur SOS consiste a maintenir Volume bas + Volume haut ensemble pendant 2 secondes, puis relâcher.</string>
     <string name="onboarding_finish_setup">Terminer la configuration</string>
     <string name="permission_dialog_title">Autoriser les permissions SOS</string>
     <string name="permission_dialog_body">Mango Guardian a besoin des appels, SMS, position, camera et notifications pour envoyer une aide rapidement. La camera sert a prendre une photo et enregistrer une video de 30 secondes quand SOS est declenche. Appuyez sur Continuer, puis Autoriser.</string>
@@ -136,7 +142,7 @@
     <string name="accessibility_preview_look_first">Cherchez d’abord cet interrupteur</string>
     <string name="system_protected">Système protégé</string>
     <string name="action_required">Action requise</string>
-    <string name="hero_body">Maintenez les deux boutons de volume enfonces pendant 3 secondes. Mango Guardian declenche la sirene, fait clignoter la lampe, appelle le premier contact enregistre et envoie votre position aux contacts.</string>
+    <string name="hero_body">Maintenez les deux boutons de volume pendant 2 secondes, puis relâchez. Mango Guardian déclenche la sirène, fait clignoter la lampe, appelle le premier contact enregistré et envoie votre position aux contacts.</string>
     <string name="status_armed">État : armé (%1$s)</string>
     <string name="status_not_armed">État : non armé</string>
     <string name="easy_setup_title">Configuration simple</string>

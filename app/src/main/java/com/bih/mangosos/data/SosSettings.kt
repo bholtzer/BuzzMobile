@@ -18,7 +18,7 @@ data class SosSettings(
     val analyticsEnabled: Boolean = false,
     val sirenVolumeFraction: Float = 1f,
     val triggerType: TriggerType = TriggerType.VOLUME_CHORD,
-    val triggerHoldMs: Long = 3000L,
+    val triggerHoldMs: Long = 2000L,
     val chordWindowMs: Long = 150L,
     val flashBlinkMs: Long = 350L,
     val cooldownMs: Long = 5000L,

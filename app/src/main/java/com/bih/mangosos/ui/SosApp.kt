@@ -214,6 +214,14 @@ fun SosApp(application: SosApplication) {
                                    cameraPermission && postNotificationsPermission
 
     val onboardingComplete = accessibilityEnabled && batteryIgnored && criticalPermissionsGranted && overlayPermission
+    val savedSetupComplete = settings.onboardingSeen ||
+        (settings.enabled && settings.userName.isNotBlank() && PhoneNumberValidator.isValid(settings.emergencyNumber))
+
+    LaunchedEffect(savedSetupComplete, settings.onboardingSeen) {
+        if (savedSetupComplete && !settings.onboardingSeen) {
+            viewModel.dismissOnboarding()
+        }
+    }
 
     val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -290,9 +298,9 @@ fun SosApp(application: SosApplication) {
                         onStop = viewModel::stopSos,
                     )
 
-                    !onboardingComplete || !settings.onboardingSeen -> FirstRunOnboardingScreen(
+                    !savedSetupComplete -> FirstRunOnboardingScreen(
                         context = context,
-                        currentSettings = settings.copy(languageCode = effectiveLanguageCode),
+                        currentSettings = settings.copy(languageCode = effectiveLanguageCode, onboardingSeen = true),
                         accessibilityEnabled = accessibilityEnabled,
                         batteryIgnored = batteryIgnored,
                         overlayPermission = overlayPermission,
@@ -312,12 +320,8 @@ fun SosApp(application: SosApplication) {
                         context = context,
                         currentSettings = settings.copy(languageCode = effectiveLanguageCode),
                         runtimeMode = runtimeState.mode,
-                        onboardingComplete = onboardingComplete,
                         accessibilityEnabled = accessibilityEnabled,
-                        batteryIgnored = batteryIgnored,
-                        overlayPermission = overlayPermission,
-                        criticalPermissionsGranted = criticalPermissionsGranted,
-                        requestPermissions = requestPermissionsWithModernFlow,
+                        onOpenAccessibility = { openAccessibilityServiceSettings(context) },
                         onManualSos = viewModel::triggerManualSos,
                         onSaveSettings = viewModel::saveSettings,
                     )
@@ -361,112 +365,20 @@ private fun SetupScreen(
     context: Context,
     currentSettings: SosSettings,
     runtimeMode: SosMode,
-    onboardingComplete: Boolean,
     accessibilityEnabled: Boolean,
-    batteryIgnored: Boolean,
-    overlayPermission: Boolean,
-    criticalPermissionsGranted: Boolean,
-    requestPermissions: () -> Unit,
+    onOpenAccessibility: () -> Unit,
     onManualSos: () -> Unit,
     onSaveSettings: (SosSettings, () -> Unit) -> Unit,
 ) {
-    val scrollState = rememberScrollState()
-    val numberValid = PhoneNumberValidator.isValid(currentSettings.emergencyNumber)
-
-    if (onboardingComplete) {
-        EmergencyInformationScreen(
-            context = context,
-            settings = currentSettings,
-            runtimeMode = runtimeMode,
-            onManualSos = onManualSos,
-            onSaveSettings = onSaveSettings,
-        )
-        return
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        HeroCard(enabled = currentSettings.enabled && onboardingComplete, runtimeMode = runtimeMode, onboardingComplete = onboardingComplete)
-        
-        if (accessibilityEnabled) {
-            ShortcutWarningCard(context)
-        }
-
-        if (!onboardingComplete) {
-            GuidedSetupCard(
-                accessibilityEnabled = accessibilityEnabled,
-                criticalPermissionsGranted = criticalPermissionsGranted,
-                batteryIgnored = batteryIgnored,
-                overlayPermission = overlayPermission,
-                    onOpenAccessibility = { openAccessibilityServiceSettings(context) },
-                onRequestPermissions = requestPermissions,
-                onOpenPowerSettings = {
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = "package:${context.packageName}".toUri()
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    runCatching { context.startActivity(intent) }.onFailure {
-                        context.startActivity(
-                            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            },
-                        )
-                    }
-                },
-                onOpenOverlaySettings = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-                            data = "package:${context.packageName}".toUri()
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        },
-                    )
-                },
-            )
-            OnboardingProgressCard(
-                accessibilityEnabled = accessibilityEnabled,
-                batteryIgnored = batteryIgnored,
-                overlayPermission = overlayPermission,
-                criticalPermissionsGranted = criticalPermissionsGranted
-            )
-        }
-
-        if (!onboardingComplete) {
-            PermissionsCard(
-                context = context,
-                accessibilityEnabled = accessibilityEnabled,
-                batteryIgnored = batteryIgnored,
-                overlayPermission = overlayPermission,
-                criticalPermissionsGranted = criticalPermissionsGranted,
-                onRequestPermissions = requestPermissions
-            )
-        }
-        
-        WarningCard()
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E151A)),
-            shape = RoundedCornerShape(28.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(stringResource(R.string.readiness_title), color = Color(0xFFFFF7ED), style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    stringResource(R.string.readiness_body),
-                    color = Color(0xFFFFDEC7),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button( modifier = Modifier.fillMaxWidth(),onClick = onManualSos, enabled = numberValid && onboardingComplete) { Text(stringResource(R.string.home_manual_sos)) }
-                }
-            }
-        }
-    }
+    EmergencyInformationScreen(
+        context = context,
+        settings = currentSettings,
+        runtimeMode = runtimeMode,
+        accessibilityEnabled = accessibilityEnabled,
+        onOpenAccessibility = onOpenAccessibility,
+        onManualSos = onManualSos,
+        onSaveSettings = onSaveSettings,
+    )
 }
 
 private fun pickContact(context: Context, contactUri: Uri): PickedContact? {
@@ -519,6 +431,8 @@ private fun EmergencyInformationScreen(
     context: Context,
     settings: SosSettings,
     runtimeMode: SosMode,
+    accessibilityEnabled: Boolean,
+    onOpenAccessibility: () -> Unit,
     onManualSos: () -> Unit,
     onSaveSettings: (SosSettings, () -> Unit) -> Unit,
 ) {
@@ -537,6 +451,10 @@ private fun EmergencyInformationScreen(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        if (!accessibilityEnabled) {
+            AccessibilityOffWarningCard(onOpenAccessibility = onOpenAccessibility)
+        }
+
         Card(
             colors = CardDefaults.cardColors(containerColor = MangoSurface),
             shape = RoundedCornerShape(28.dp),
@@ -681,6 +599,51 @@ private fun EmergencyInformationScreen(
             document = document,
             onDismiss = { selectedDocument = null },
         )
+    }
+}
+
+@Composable
+private fun AccessibilityOffWarningCard(
+    onOpenAccessibility: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MangoRedSoft),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.Warning,
+                    contentDescription = null,
+                    tint = MangoRed,
+                )
+                Text(
+                    stringResource(R.string.accessibility_off_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = MangoText,
+                )
+            }
+            Text(
+                stringResource(R.string.accessibility_off_body),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MangoText,
+            )
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                onClick = onOpenAccessibility,
+            ) {
+                Text(stringResource(R.string.accessibility_off_button))
+            }
+        }
     }
 }
 

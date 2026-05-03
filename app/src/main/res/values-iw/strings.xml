@@ -25,7 +25,7 @@
     <string name="home_call_sms_contact">איש קשר לשיחה ו-SMS</string>
     <string name="home_whatsapp_contact">איש קשר ל-WhatsApp</string>
     <string name="home_trigger_method">הפעלת SOS</string>
-    <string name="home_trigger_body">להחזיק ווליום למעלה + ווליום למטה יחד למשך 3 שניות.</string>
+    <string name="home_trigger_body">להחזיק ווליום למעלה + ווליום למטה יחד למשך 2 שניות ואז לשחרר.</string>
     <string name="home_siren">סירנה</string>
     <string name="home_flash">הבהוב פנס</string>
     <string name="home_cooldown">זמן המתנה</string>
@@ -43,6 +43,9 @@
     <string name="edit_invalid_contact">יש להזין שם ואיש קשר תקין לשיחה/SMS. WhatsApp אופציונלי, אבל חייב להיות תקין אם משתמשים בו.</string>
     <string name="home_manual_sos">SOS ידני</string>
     <string name="home_missing">לא הוגדר</string>
+    <string name="accessibility_off_title">Mango Guardian לא פעיל במלואו</string>
+    <string name="accessibility_off_body">הנגישות כבויה. הפעלה מכפתורי הווליום ושליחה אוטומטית ב-WhatsApp לא יעבדו. SOS ידני עדיין יכול לפתוח את WhatsApp, אבל ייתכן שתצטרך ללחוץ שלח בעצמך.</string>
+    <string name="accessibility_off_button">הפעל נגישות</string>
     <string name="setup_done_title">ההגדרה הושלמה</string>
     <string name="setup_done_subtitle">%1$s, Mango Guardian מוכן.</string>
     <string name="setup_done_body">%1$s, לחץ על הכפתור כדי לראות את פרטי ה-SOS.</string>
@@ -98,7 +101,7 @@
     <string name="onboarding_use_same_contact">השתמש באותו איש קשר</string>
     <string name="onboarding_choose_different_whatsapp">בחר איש קשר WhatsApp אחר</string>
     <string name="onboarding_choose_whatsapp">בחר איש קשר WhatsApp</string>
-    <string name="onboarding_alert_settings_subtitle">הפעלת SOS היא החזקת ווליום למטה + ווליום למעלה יחד למשך 3 שניות.</string>
+    <string name="onboarding_alert_settings_subtitle">הפעלת SOS היא החזקת ווליום למטה + ווליום למעלה יחד למשך 2 שניות ואז לשחרר.</string>
     <string name="onboarding_finish_setup">סיום הגדרה</string>
     <string name="permission_dialog_title">אפשר הרשאות SOS</string>
     <string name="permission_dialog_body">Mango Guardian צריך גישה לשיחות, SMS, מיקום, מצלמה והתראות כדי לשלוח עזרה במהירות בזמן חירום. המצלמה משמשת לצילום תמונה ולהקלטת וידאו של 30 שניות כאשר SOS מופעל. לחץ המשך ואז אפשר.</string>
@@ -136,7 +139,7 @@
     <string name="accessibility_preview_look_first">חפש קודם את המתג העליון</string>
     <string name="system_protected">המערכת מוגנת</string>
     <string name="action_required">נדרשת פעולה</string>
-    <string name="hero_body">החזק את שני כפתורי הווליום יחד למשך 3 שניות. Mango Guardian ישמיע סירנה, יהבהב בפנס, יתקשר לאיש הקשר הראשון וישלח את המיקום לאנשי הקשר.</string>
+    <string name="hero_body">החזק את שני כפתורי הווליום יחד למשך 2 שניות ואז שחרר. Mango Guardian ישמיע סירנה, יהבהב בפנס, יתקשר לאיש הקשר הראשון וישלח את המיקום לאנשי הקשר.</string>
     <string name="status_armed">מצב: פעיל (%1$s)</string>
     <string name="status_not_armed">מצב: לא פעיל</string>
     <string name="easy_setup_title">הגדרה קלה</string>
@@ -178,6 +181,9 @@
     <string name="emergency_message_location_line">מיקום: %1$s</string>
     <string name="emergency_sms_message">התראת חירום מ-Mango Guardian: ייתכן ש-%1$s זקוק לעזרה. מיקום אחרון ידוע: %2$s</string>
     <string name="emergency_whatsapp_message">התראת חירום מ-Mango Guardian: ייתכן ש-%1$s זקוק לעזרה עכשיו. %2$s</string>
+    <string name="toast_sms_sent">הודעת SMS נשלחה.</string>
+    <string name="toast_whatsapp_sent">הודעת WhatsApp נשלחה.</string>
+    <string name="toast_whatsapp_manual_send_needed">WhatsApp נפתח. לחץ שלח ידנית כי הנגישות כבויה.</string>
     <string name="legal_privacy_policy">מדיניות פרטיות</string>
     <string name="legal_terms_conditions">תנאי שימוש</string>
     <string name="legal_close">סגור</string>

@@ -29,6 +29,32 @@ class TriggerDetectorTest {
     }
 
     @Test
+    fun delayedCheckTriggersWhenBothButtonsRemainHeldWithoutRepeatEvents() {
+        val detector = TriggerDetector()
+        var triggered = false
+        val onTrigger = { triggered = true }
+
+        assertFalse(detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.ACTION_DOWN, settings, 0L, onTrigger))
+        assertTrue(detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.ACTION_DOWN, settings, 200L, onTrigger))
+        assertTrue(detector.isChordHeld())
+        assertTrue(detector.triggerIfChordHeld(settings, onTrigger))
+        assertTrue(triggered)
+    }
+
+    @Test
+    fun completedOnboardingStillAllowsHardwareTriggerWhenHiddenEnabledFlagIsOff() {
+        val detector = TriggerDetector()
+        var triggered = false
+        val onTrigger = { triggered = true }
+        val completedSettings = settings.copy(enabled = false, onboardingSeen = true)
+
+        assertFalse(detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.ACTION_DOWN, completedSettings, 0L, onTrigger))
+        assertTrue(detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.ACTION_DOWN, completedSettings, 200L, onTrigger))
+        assertTrue(detector.triggerIfChordHeld(completedSettings, onTrigger))
+        assertTrue(triggered)
+    }
+
+    @Test
     fun doesNotTriggerSequentialPressesThatAreNotHeldTogether() {
         val detector = TriggerDetector()
         var triggered = false

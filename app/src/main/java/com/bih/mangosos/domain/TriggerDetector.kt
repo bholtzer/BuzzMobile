@@ -31,7 +31,7 @@ class TriggerDetector {
         now: Long = System.currentTimeMillis(),
         onTrigger: () -> Unit
     ): Boolean {
-        if (!settings.enabled) return false
+        if (!settings.canUseHardwareTrigger()) return false
 
         val isVolumeUp = keyCode == KeyEvent.KEYCODE_VOLUME_UP
         val isVolumeDown = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
@@ -67,10 +67,26 @@ class TriggerDetector {
         return (upHeld && downHeld) || triggerLatched
     }
 
+    fun isChordHeld(): Boolean = upHeld && downHeld
+
+    fun triggerIfChordHeld(
+        settings: SosSettings,
+        onTrigger: () -> Unit,
+    ): Boolean {
+        if (!settings.canUseHardwareTrigger() || !upHeld || !downHeld || triggerLatched) return false
+        triggerLatched = true
+        onTrigger()
+        return true
+    }
+
     fun reset() {
         upHeld = false
         downHeld = false
         chordStartedAt = 0L
         triggerLatched = false
+    }
+
+    private fun SosSettings.canUseHardwareTrigger(): Boolean {
+        return enabled || (onboardingSeen && PhoneNumberValidator.isValid(emergencyNumber))
     }
 }

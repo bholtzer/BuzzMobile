@@ -33,14 +33,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         viewModelScope.launch {
-            appContainer.settingsStore.updateSettings { settings }
-            appContainer.sosCoordinator.setArmed(settings.enabled)
+            val savedSettings = settings.copy(enabled = true, onboardingSeen = true)
+            appContainer.settingsStore.updateSettings { savedSettings }
+            appContainer.sosCoordinator.setArmed(true)
             trackIfAllowed("settings_saved")
-            if (settings.enabled) {
-                appContainer.monitoringServiceController.start()
-            } else {
-                appContainer.monitoringServiceController.stop()
-            }
+            appContainer.monitoringServiceController.start()
         }
     }
 
@@ -95,15 +92,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         viewModelScope.launch {
-            val completed = settings.copy(onboardingSeen = true)
+            val completed = settings.copy(onboardingSeen = true, enabled = true)
             appContainer.settingsStore.updateSettings { completed }
-            appContainer.sosCoordinator.setArmed(completed.enabled)
+            appContainer.sosCoordinator.setArmed(true)
             trackIfAllowed("onboarding_completed")
-            if (completed.enabled) {
-                appContainer.monitoringServiceController.start()
-            } else {
-                appContainer.monitoringServiceController.stop()
-            }
+            appContainer.monitoringServiceController.start()
         }
     }
 

@@ -85,7 +85,7 @@ class SosSettingsStore(
             } catch (e: Exception) {
                 TriggerType.VOLUME_CHORD
             },
-            triggerHoldMs = 3000L,
+            triggerHoldMs = (preferences[Keys.triggerHoldMs] ?: 2000L).coerceAtMost(2000L),
             chordWindowMs = 150L,
             flashBlinkMs = preferences[Keys.flashBlinkMs] ?: 350L,
             cooldownMs = preferences[Keys.cooldownMs] ?: 5000L,
