@@ -526,6 +526,10 @@ private fun EmergencyInformationScreen(
     var showEditDialog by rememberSaveable { mutableStateOf(false) }
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedDocument by rememberSaveable { mutableStateOf<LegalDocument?>(null) }
+    val menuLabel = stringResource(R.string.home_menu)
+    val editDetailsLabel = stringResource(R.string.home_edit_details)
+    val privacyPolicyLabel = stringResource(R.string.legal_privacy_policy)
+    val termsConditionsLabel = stringResource(R.string.legal_terms_conditions)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -574,7 +578,7 @@ private fun EmergencyInformationScreen(
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(
                                 Icons.Rounded.MoreVert,
-                                contentDescription = stringResource(R.string.home_menu),
+                                contentDescription = menuLabel,
                                 tint = MangoText,
                             )
                         }
@@ -583,21 +587,21 @@ private fun EmergencyInformationScreen(
                             onDismissRequest = { menuExpanded = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.home_edit_details)) },
+                                text = { Text(editDetailsLabel) },
                                 onClick = {
                                     menuExpanded = false
                                     showEditDialog = true
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.legal_privacy_policy)) },
+                                text = { Text(privacyPolicyLabel) },
                                 onClick = {
                                     menuExpanded = false
                                     selectedDocument = LegalDocument.PRIVACY_POLICY
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.legal_terms_conditions)) },
+                                text = { Text(termsConditionsLabel) },
                                 onClick = {
                                     menuExpanded = false
                                     selectedDocument = LegalDocument.TERMS_CONDITIONS
@@ -1128,9 +1132,6 @@ private fun OnboardingIntroScreen(
                     )
                 }
 
-                if (isLanguageStep) {
-                    LegalLinks(modifier = Modifier.fillMaxWidth())
-                }
             }
         }
     }
@@ -1195,8 +1196,6 @@ private fun SetupDoneScreen(
                 ) {
                     Text(stringResource(R.string.setup_done_button))
                 }
-
-                LegalLinks(modifier = Modifier.fillMaxWidth())
             }
         }
     }
