@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -7,6 +9,29 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
+fun signingValue(propertyName: String, envName: String): String? =
+    (localProperties.getProperty(propertyName) ?: System.getenv(envName))
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("mango.release.storeFile", "MANGO_RELEASE_STORE_FILE")
+val releaseStorePassword = signingValue("mango.release.storePassword", "MANGO_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = signingValue("mango.release.keyAlias", "MANGO_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingValue("mango.release.keyPassword", "MANGO_RELEASE_KEY_PASSWORD")
+val hasReleaseSigningConfig = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { it != null }
+
 android {
     namespace = "com.bih.mangosos"
     compileSdk = 36
@@ -15,16 +40,33 @@ android {
         applicationId = "com.bih.mangosos"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigningConfig) {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = if (hasReleaseSigningConfig) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
