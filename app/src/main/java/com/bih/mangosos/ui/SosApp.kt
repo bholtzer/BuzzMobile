@@ -81,7 +81,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -103,6 +102,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -273,9 +273,6 @@ fun SosApp(application: SosApplication) {
         LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
     ) {
         Scaffold(
-            topBar = {
-                TopAppBar(title = { Text(stringResource(R.string.app_name)) })
-            },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = Color.Transparent,
         ) { innerPadding ->
@@ -482,7 +479,10 @@ private fun EmergencyInformationScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             stringResource(R.string.home_emergency_information),
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontSize = 28.sp,
+                                lineHeight = 32.sp,
+                            ),
                             fontWeight = FontWeight.Black,
                             color = MangoText,
                         )

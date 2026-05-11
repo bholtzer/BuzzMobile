@@ -187,14 +187,14 @@
     <string name="legal_privacy_policy">מדיניות פרטיות</string>
     <string name="legal_terms_conditions">תנאי שימוש</string>
     <string name="legal_close">סגור</string>
-    <string name="privacy_policy_p1">Mango Guardian נועד לעזור לשלוח התראות חירום במהירות מהמכשיר הזה.</string>
+    <string name="privacy_policy_p1">Mango Guardian פותח על ידי BIH Studio ונועד לעזור לשלוח התראות חירום במהירות מהמכשיר הזה.</string>
     <string name="privacy_policy_p2">האפליקציה עשויה להשתמש בשם האדם המוגן, אנשי קשר לחירום, איש קשר WhatsApp, מיקום, תמונת מצלמה, וידאו מצלמה של 30 שניות, שיחות, SMS, התראות, הצגה מעל אפליקציות, סוללה והגדרות נגישות.</string>
     <string name="privacy_policy_p3">המידע משמש להגדרת Mango Guardian, להפעלת פעולות חירום, להתקשרות או שליחת הודעות לאנשי הקשר שנבחרו, לשיתוף מיקום ולהצגת התראות דחופות.</string>
     <string name="privacy_policy_p4">ההגדרות נשמרות מקומית במכשיר. האפליקציה אינה מפעילה שרת ענן משלה עבור נתוני הגדרת החירום.</string>
     <string name="privacy_policy_p5">כאשר SOS מופעל, מידע עשוי להישלח לאנשי הקשר שבחרת דרך שיחות, SMS, WhatsApp או פעולות מערכת Android.</string>
     <string name="privacy_policy_p6">אפשר לשנות או להסיר הרשאות בהגדרות Android. חלק מתכונות SOS עלולות להפסיק לעבוד אם הרשאות נדרשות כבויות.</string>
     <string name="privacy_policy_p7">מחיקת האפליקציה מסירה את נתוני האפליקציה המקומיים מהמכשיר. הודעות שכבר נשלחו לאנשי קשר נשארות אצל אותם נמענים ובשירותים שלהם.</string>
-    <string name="terms_conditions_p1">בשימוש ב-Mango Guardian, אתה מסכים להשתמש באפליקציה רק למטרות חוקיות הקשורות לבטיחות.</string>
+    <string name="terms_conditions_p1">Mango Guardian פותח על ידי BIH Studio. בשימוש ב-Mango Guardian, אתה מסכים להשתמש באפליקציה רק למטרות חוקיות הקשורות לבטיחות.</string>
     <string name="terms_conditions_p2">Mango Guardian אינו תחליף למשטרה, אמבולנס, כיבוי אש, שירות רפואי או שירותי חירום רשמיים.</string>
     <string name="terms_conditions_p3">האחריות לבחור אנשי קשר נכונים, לעדכן מספרי טלפון ולוודא שההרשאות פעילות היא על המשתמש.</string>
     <string name="terms_conditions_p4">פעולות חירום עלולות להיכשל בגלל קליטת רשת, מגבלות סוללה, הגדרות Android, מגבלות יצרן, הרשאות כבויות או אפליקציות צד שלישי שאינן זמינות.</string>

@@ -187,7 +187,7 @@
     <string name="legal_privacy_policy">Politique de confidentialité</string>
     <string name="legal_terms_conditions">Conditions générales</string>
     <string name="legal_close">Fermer</string>
-    <string name="privacy_policy_p1">Mango Guardian est conçu pour vous aider à envoyer rapidement des alertes d’urgence depuis cet appareil.</string>
+    <string name="privacy_policy_p1">Mango Guardian est développé par BIH Studio et conçu pour vous aider à envoyer rapidement des alertes d’urgence depuis cet appareil.</string>
     <string name="privacy_policy_p2">L’app peut utiliser le nom de la personne protégée, les contacts d’urgence, le contact WhatsApp, la position, une photo de caméra, une vidéo de caméra de 30 secondes, les appels, SMS, notifications, superposition, batterie et paramètres d’accessibilité.</string>
     <string name="privacy_policy_p3">Ces informations servent à configurer Mango Guardian, lancer les actions d’urgence, appeler ou envoyer un message aux contacts enregistrés, partager la position et afficher des alertes urgentes.</string>
     <string name="privacy_policy_p4">Les paramètres sont stockés localement sur cet appareil. Cette app n’utilise pas son propre serveur cloud pour vos données de configuration d’urgence.</string>
@@ -197,7 +197,7 @@
     <string name="privacy_policy_p8">Si vous activez les statistiques, Mango Guardian peut collecter des événements anonymes comme app ouverte, langue choisie, onboarding terminé et SOS manuel appuyé. Les statistiques ne contiennent pas les noms, numéros de téléphone, contacts, position, photos, appels, contenu SMS ni contenu WhatsApp.</string>
     <string name="privacy_policy_p9">Quand SOS envoie une alerte par SMS ou WhatsApp, Mango Guardian peut enregistrer un rapport dans Firebase. Le rapport peut inclure le nom de la personne protégée, les contacts choisis, le contact WhatsApp, la source du déclenchement, état appel/SMS, dernière position, lien de carte, photo SOS et vidéo SOS de 30 secondes si elles ont été capturées.</string>
     <string name="privacy_policy_contact">Pour les questions ou demandes de confidentialité, contactez-nous à mangosos.support@gmail.com.</string>
-    <string name="terms_conditions_p1">En utilisant Mango Guardian, vous acceptez de l’utiliser uniquement à des fins légales liées à la sécurité.</string>
+    <string name="terms_conditions_p1">Mango Guardian est développé par BIH Studio. En utilisant Mango Guardian, vous acceptez de l’utiliser uniquement à des fins légales liées à la sécurité.</string>
     <string name="terms_conditions_p2">Mango Guardian ne remplace pas la police, les ambulances, les pompiers, les services médicaux ni les services d’urgence officiels.</string>
     <string name="terms_conditions_p3">Vous êtes responsable du choix des bons contacts, de la mise à jour des numéros et de la vérification des autorisations.</string>
     <string name="terms_conditions_p4">Les actions d’urgence peuvent échouer à cause du réseau, des restrictions de batterie, des paramètres Android, des limites du fabricant, des autorisations désactivées ou d’apps tierces indisponibles.</string>
