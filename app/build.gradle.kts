@@ -40,8 +40,8 @@ android {
         applicationId = "com.bih.mangosos"
         minSdk = 28
         targetSdk = 35
-        versionCode = 3
-        versionName = "3"
+        versionCode = 4
+        versionName = "4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

@@ -35,7 +35,10 @@ class SosAccessibilityService : AccessibilityService() {
 
         val sosActive = runtimeState.mode == SosMode.SOS_ACTIVE || runtimeState.mode == SosMode.TRIGGER_DETECTED
         if (!sosActive) {
-            whatsappSentForCurrentSos = false
+            if (whatsappSentForCurrentSos) {
+                Log.d("SosAccessibilityService", "SOS finished, resetting WhatsApp state")
+                whatsappSentForCurrentSos = false
+            }
             whatsappClickJob?.cancel()
             whatsappClickJob = null
             return
@@ -52,25 +55,42 @@ class SosAccessibilityService : AccessibilityService() {
     private fun scheduleWhatsAppAutoClick() {
         if (whatsappClickJob?.isActive == true) return
         whatsappClickJob = serviceScope.launch {
-            repeat(60) { attempt ->
+            Log.d("SosAccessibilityService", "Starting WhatsApp auto-click loop")
+            repeat(50) { attempt -> // Increased attempts and duration
                 val root = rootInActiveWindow
+                if (root == null) {
+                    delay(400)
+                    return@repeat
+                }
+
                 if (findAndClickSendButton(root)) {
                     Log.d("SosAccessibilityService", "WhatsApp send button clicked via ID/Text search")
                     finishWhatsAppAutomationForCurrentSos()
                     return@launch
                 }
+
+                if (findAndClickIntermediateButton(root)) {
+                    Log.d("SosAccessibilityService", "WhatsApp intermediate button clicked; waiting for final send")
+                    delay(600)
+                    return@repeat
+                }
+                
                 if (attempt >= 1 && findAndClickBottomRightSendButton(root)) {
                     Log.d("SosAccessibilityService", "WhatsApp send button clicked via bottom-right heuristic")
                     finishWhatsAppAutomationForCurrentSos()
                     return@launch
                 }
-                if (tapWhatsAppMediaSendFallback(root, allowWithoutPreviewSignal = attempt >= 2)) {
+                
+                // Coordination-based fallback if we are likely on the preview screen
+                if (tapWhatsAppMediaSendFallback(root, allowWithoutPreviewSignal = attempt >= 4)) {
                     Log.d("SosAccessibilityService", "WhatsApp send button triggered via fallback tap")
                     finishWhatsAppAutomationForCurrentSos()
                     return@launch
                 }
-                delay(100)
+                
+                delay(400) // Slower delay for more reliable tree updates
             }
+            Log.d("SosAccessibilityService", "WhatsApp auto-click loop timed out")
         }
     }
 
@@ -88,16 +108,10 @@ class SosAccessibilityService : AccessibilityService() {
             "com.whatsapp.w4b:id/send_media_btn",
             "com.whatsapp:id/media_send",
             "com.whatsapp.w4b:id/media_send",
-            "com.whatsapp:id/confirm_button",
-            "com.whatsapp.w4b:id/confirm_button",
-            "com.whatsapp:id/done",
-            "com.whatsapp.w4b:id/done",
-            "com.whatsapp:id/ok",
-            "com.whatsapp.w4b:id/ok",
             "com.whatsapp:id/send_button",
             "com.whatsapp.w4b:id/send_button",
-            "com.whatsapp:id/next_button",
-            "com.whatsapp.w4b:id/next_button",
+            "com.whatsapp:id/menu_item_send",
+            "com.whatsapp.w4b:id/menu_item_send",
         )
 
         for (id in sendButtonIds) {
@@ -109,7 +123,7 @@ class SosAccessibilityService : AccessibilityService() {
             }
         }
 
-        val buttonTexts = listOf("Send", "OK", "Done", "שלח", "שליחה", "אישור", "Enviar", "Envoyer")
+        val buttonTexts = listOf("Send", "שלח", "שליחה", "Enviar", "Envoyer")
         for (text in buttonTexts) {
             val nodes = node.findAccessibilityNodeInfosByText(text)
             for (sendNode in nodes) {
@@ -124,7 +138,49 @@ class SosAccessibilityService : AccessibilityService() {
         }
 
         for (i in 0 until node.childCount) {
-            if (findAndClickSendButton(node.getChild(i))) {
+            val child = node.getChild(i)
+            if (findAndClickSendButton(child)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun findAndClickIntermediateButton(node: AccessibilityNodeInfo?): Boolean {
+        if (node == null) return false
+
+        val intermediateButtonIds = listOf(
+            "com.whatsapp:id/confirm_button",
+            "com.whatsapp.w4b:id/confirm_button",
+            "com.whatsapp:id/done",
+            "com.whatsapp.w4b:id/done",
+            "com.whatsapp:id/ok",
+            "com.whatsapp.w4b:id/ok",
+            "com.whatsapp:id/next_button",
+            "com.whatsapp.w4b:id/next_button",
+        )
+
+        for (id in intermediateButtonIds) {
+            val nodes = node.findAccessibilityNodeInfosByViewId(id)
+            for (intermediateNode in nodes) {
+                if (clickNodeOrClickableParent(intermediateNode)) {
+                    return true
+                }
+            }
+        }
+
+        val buttonTexts = listOf("Next", "OK", "Done", "הבא", "אישור", "אוקיי", "Siguiente", "Aceptar", "Suivant")
+        for (text in buttonTexts) {
+            val nodes = node.findAccessibilityNodeInfosByText(text)
+            for (intermediateNode in nodes) {
+                if (clickNodeOrClickableParent(intermediateNode)) {
+                    return true
+                }
+            }
+        }
+
+        for (i in 0 until node.childCount) {
+            if (findAndClickIntermediateButton(node.getChild(i))) {
                 return true
             }
         }
@@ -140,13 +196,9 @@ class SosAccessibilityService : AccessibilityService() {
 
         val targets = listOf(
             "send",
-            "ok",
-            "done",
             "send media",
             "שלח",
             "שליחה",
-            "אישור",
-            "אוקיי",
             "enviar",
             "envoyer",
         )
@@ -155,9 +207,8 @@ class SosAccessibilityService : AccessibilityService() {
 
     private fun clickNodeOrClickableParent(node: AccessibilityNodeInfo?): Boolean {
         var current = node
-        repeat(6) {
-            if (current == null) return false
-            val candidate = current
+        repeat(10) { // Deep search for clickable parent
+            val candidate = current ?: return false
             if (candidate.isEnabled && candidate.isClickable) {
                 return candidate.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             }
@@ -178,11 +229,11 @@ class SosAccessibilityService : AccessibilityService() {
         val centerX = bounds.exactCenterX()
         val centerY = bounds.exactCenterY()
         
-        // WhatsApp green circle send button is usually in the bottom-right corner
-        val looksLikeBottomRightSend = bounds.width() in 40..300 &&
-            bounds.height() in 40..300 &&
-            centerX >= screenWidth * 0.65f &&
-            centerY >= screenHeight * 0.70f
+        // Circular FAB heuristic (usually 40-400px diameter) in the bottom-right quadrant
+        val looksLikeBottomRightSend = bounds.width() in 40..400 &&
+            bounds.height() in 40..400 &&
+            centerX >= screenWidth * 0.60f &&
+            centerY >= screenHeight * 0.65f
 
         if (node.isVisibleToUser && node.isEnabled && looksLikeBottomRightSend) {
             if (clickNodeOrClickableParent(node)) {
@@ -211,12 +262,13 @@ class SosAccessibilityService : AccessibilityService() {
         val height = displayMetrics.heightPixels.toFloat()
         if (width <= 0f || height <= 0f) return false
 
-        // Tap standard locations for the green FAB send button
+        // Common tap locations for the green FAB send button on media preview screen
         val tapPoints = listOf(
             width * 0.915f to height * 0.902f,
             width * 0.900f to height * 0.895f,
             width * 0.930f to height * 0.885f,
             width * 0.880f to height * 0.910f,
+            width * 0.920f to height * 0.920f,
         )
         for ((tapX, tapY) in tapPoints) {
             if (tapScreen(tapX, tapY)) {
@@ -247,7 +299,8 @@ class SosAccessibilityService : AccessibilityService() {
             label.contains("החלק") ||
             label.contains("מסננים") ||
             label.contains("כיתוב") ||
-            label.contains("כתובית")
+            label.contains("כתובית") ||
+            label.contains("הוספת כיתוב")
         ) {
             return true
         }
@@ -266,7 +319,7 @@ class SosAccessibilityService : AccessibilityService() {
 
     private fun returnToMangoGuardian() {
         serviceScope.launch {
-            delay(500)
+            delay(1500) // Longer delay to allow WhatsApp to finish sending
             val intent = MainActivity.createLaunchIntent(this@SosAccessibilityService).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
