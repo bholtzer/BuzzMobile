@@ -92,6 +92,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -267,91 +268,93 @@ fun SosApp(application: SosApplication) {
                 !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
         }
 
-    CompositionLocalProvider(
-        LocalContext provides context,
-        LocalConfiguration provides localizedConfiguration,
-        LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
-    ) {
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = Color.Transparent,
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color(0xFF101828), Color(0xFF3A1014), Color(0xFFF4F7F9)),
-                        ),
-                    )
-                    .padding(innerPadding)
-                    .padding(WindowInsets.safeDrawing.asPaddingValues()),
-            ) {
-                when {
-                    runtimeState.mode == SosMode.SOS_ACTIVE || runtimeState.mode == SosMode.TRIGGER_DETECTED -> ActiveSosScreen(
-                        message = runtimeState.message,
-                        callStatus = runtimeState.callStatus.name.replace('_', ' '),
-                        locationStatus = runtimeState.locationShareStatus.name.replace('_', ' '),
-                        onStop = viewModel::stopSos,
-                    )
+    key(effectiveLanguageCode) {
+        CompositionLocalProvider(
+            LocalContext provides context,
+            LocalConfiguration provides localizedConfiguration,
+            LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
+        ) {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                containerColor = Color.Transparent,
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFF101828), Color(0xFF3A1014), Color(0xFFF4F7F9)),
+                            ),
+                        )
+                        .padding(innerPadding)
+                        .padding(WindowInsets.safeDrawing.asPaddingValues()),
+                ) {
+                    when {
+                        runtimeState.mode == SosMode.SOS_ACTIVE || runtimeState.mode == SosMode.TRIGGER_DETECTED -> ActiveSosScreen(
+                            message = runtimeState.message,
+                            callStatus = runtimeState.callStatus.name.replace('_', ' '),
+                            locationStatus = runtimeState.locationShareStatus.name.replace('_', ' '),
+                            onStop = viewModel::stopSos,
+                        )
 
-                    !savedSetupComplete -> FirstRunOnboardingScreen(
-                        context = context,
-                        currentSettings = settings.copy(languageCode = effectiveLanguageCode, onboardingSeen = true),
-                        accessibilityEnabled = accessibilityEnabled,
-                        batteryIgnored = batteryIgnored,
-                        overlayPermission = overlayPermission,
-                        criticalPermissionsGranted = criticalPermissionsGranted,
-                        requestPermissions = requestPermissionsWithModernFlow,
-                        permissionNeedsSettings = permissionNeedsSettings,
-                        openAppSettings = { openAppSettings(context) },
-                        onLanguageSelected = { languageCode ->
-                            pendingLanguageCode = languageCode
-                            viewModel.saveLanguage(languageCode)
-                        },
-                        onAnalyticsConsentChanged = viewModel::setAnalyticsEnabled,
-                        onFinishSetup = viewModel::completeOnboarding,
-                    )
+                        !savedSetupComplete -> FirstRunOnboardingScreen(
+                            context = context,
+                            currentSettings = settings.copy(languageCode = effectiveLanguageCode, onboardingSeen = true),
+                            accessibilityEnabled = accessibilityEnabled,
+                            batteryIgnored = batteryIgnored,
+                            overlayPermission = overlayPermission,
+                            criticalPermissionsGranted = criticalPermissionsGranted,
+                            requestPermissions = requestPermissionsWithModernFlow,
+                            permissionNeedsSettings = permissionNeedsSettings,
+                            openAppSettings = { openAppSettings(context) },
+                            onLanguageSelected = { languageCode ->
+                                pendingLanguageCode = languageCode
+                                viewModel.saveLanguage(languageCode)
+                            },
+                            onAnalyticsConsentChanged = viewModel::setAnalyticsEnabled,
+                            onFinishSetup = viewModel::completeOnboarding,
+                        )
 
-                    else -> SetupScreen(
-                        context = context,
-                        currentSettings = settings.copy(languageCode = effectiveLanguageCode),
-                        runtimeMode = runtimeState.mode,
-                        accessibilityEnabled = accessibilityEnabled,
-                        onOpenAccessibility = { openAccessibilityServiceSettings(context) },
-                        onManualSos = viewModel::triggerManualSos,
-                        onSaveSettings = viewModel::saveSettings,
-                    )
+                        else -> SetupScreen(
+                            context = context,
+                            currentSettings = settings.copy(languageCode = effectiveLanguageCode),
+                            runtimeMode = runtimeState.mode,
+                            accessibilityEnabled = accessibilityEnabled,
+                            onOpenAccessibility = { openAccessibilityServiceSettings(context) },
+                            onManualSos = viewModel::triggerManualSos,
+                            onSaveSettings = viewModel::saveSettings,
+                        )
+                    }
                 }
             }
-        }
 
-        if (showPermissionRationale) {
-            AlertDialog(
-                onDismissRequest = { showPermissionRationale = false },
-                title = { Text(stringResource(R.string.permission_dialog_title)) },
-                text = {
-                    Text(
-                        stringResource(R.string.permission_dialog_body)
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showPermissionRationale = false
-                            permissionRequestAttempted = true
-                            permissionsLauncher.launch(permissionList.toTypedArray())
-                        },
-                    ) {
-                        Text(stringResource(R.string.onboarding_continue))
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { showPermissionRationale = false }) {
-                        Text(stringResource(R.string.not_now))
-                    }
-                },
-            )
+            if (showPermissionRationale) {
+                AlertDialog(
+                    onDismissRequest = { showPermissionRationale = false },
+                    title = { Text(stringResource(R.string.permission_dialog_title)) },
+                    text = {
+                        Text(
+                            stringResource(R.string.permission_dialog_body)
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showPermissionRationale = false
+                                permissionRequestAttempted = true
+                                permissionsLauncher.launch(permissionList.toTypedArray())
+                            },
+                        ) {
+                            Text(stringResource(R.string.onboarding_continue))
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showPermissionRationale = false }) {
+                            Text(stringResource(R.string.not_now))
+                        }
+                    },
+                )
+            }
         }
     }
 }
@@ -3153,7 +3156,7 @@ private fun openAppSettings(context: Context) {
 }
 
 private fun Context.localizedContext(languageCode: String): Context {
-    val safeLanguageCode = languageCode.ifBlank { return this }
+    val safeLanguageCode = languageCode.normalizeAppLanguageCode().ifBlank { return this }
     val locale = Locale.forLanguageTag(safeLanguageCode)
     Locale.setDefault(locale)
     val configuration = Configuration(resources.configuration)
@@ -3161,7 +3164,18 @@ private fun Context.localizedContext(languageCode: String): Context {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
         configuration.setLocales(LocaleList(locale))
     }
+    configuration.setLayoutDirection(locale)
     return createConfigurationContext(configuration)
+}
+
+private fun String.normalizeAppLanguageCode(): String {
+    return when (lowercase(Locale.ROOT)) {
+        "en", "english" -> "en"
+        "he", "iw", "heb", "hebrew" -> "he"
+        "es", "spanish" -> "es"
+        "fr", "france", "french", "français", "francais" -> "fr"
+        else -> this
+    }
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
