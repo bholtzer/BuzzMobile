@@ -408,6 +408,14 @@ private fun pickContact(context: Context, contactUri: Uri): PickedContact? {
     }
 }
 
+private fun createPickPhoneContactIntent(): Intent =
+    Intent(Intent.ACTION_PICK).apply {
+        setDataAndType(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            ContactsContract.CommonDataKinds.Phone.CONTENT_TYPE,
+        )
+    }
+
 private fun contactDisplayValue(
     name: String,
     phone: String,
@@ -671,7 +679,7 @@ private fun EditEmergencyDetailsDialog(
     val pickPhoneContract = remember {
         object : ActivityResultContract<Void?, Uri?>() {
             override fun createIntent(context: Context, input: Void?): Intent =
-                Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+                createPickPhoneContactIntent()
 
             override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
                 if (resultCode == Activity.RESULT_OK) intent?.data else null
@@ -1378,7 +1386,7 @@ private fun FirstRunOnboardingScreen(
     val pickPhoneContract = remember {
         object : ActivityResultContract<Void?, Uri?>() {
             override fun createIntent(context: Context, input: Void?): Intent =
-                Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+                createPickPhoneContactIntent()
 
             override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
                 if (resultCode == Activity.RESULT_OK) intent?.data else null
@@ -3135,17 +3143,39 @@ private fun openAccessibilityServiceSettings(context: Context) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    val directIntents = listOf(directIntent, directIntentNoPackage)
-    val openedDirectly = directIntents.any { intent ->
-        runCatching {
-            context.startActivity(intent)
-            true
-        }.getOrDefault(false)
-    }
-    if (!openedDirectly) {
-        context.startActivity(fallbackIntent)
+    val openedDirectly = shouldUseAccessibilityDetailsIntent() &&
+        listOf(directIntent, directIntentNoPackage).any { intent ->
+            context.startSettingsActivityIfResolved(intent)
+        }
+
+    if (!openedDirectly && !context.startSettingsActivityIfResolved(fallbackIntent)) {
+        runCatching { context.startActivity(fallbackIntent) }
     }
 }
+
+private fun shouldUseAccessibilityDetailsIntent(): Boolean {
+    val vendor = "${Build.MANUFACTURER} ${Build.BRAND}".lowercase(Locale.ROOT)
+    val unreliableVendors = listOf("huawei", "honor", "xiaomi", "redmi", "poco")
+    return unreliableVendors.none { vendor.contains(it) }
+}
+
+private fun Context.startSettingsActivityIfResolved(intent: Intent): Boolean {
+    val resolvedPackage = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        ?.activityInfo
+        ?.packageName
+        .orEmpty()
+    if (!resolvedPackage.looksLikeSettingsPackage()) return false
+
+    return runCatching {
+        startActivity(intent)
+        true
+    }.getOrDefault(false)
+}
+
+private fun String.looksLikeSettingsPackage(): Boolean =
+    contains("settings", ignoreCase = true) ||
+        equals("com.miui.securitycenter", ignoreCase = true) ||
+        equals("com.huawei.systemmanager", ignoreCase = true)
 
 private fun openAppSettings(context: Context) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
