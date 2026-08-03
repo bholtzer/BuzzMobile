@@ -1,7 +1,30 @@
-.gradle/
-/build/
-/local.properties
-/.idea/
-/*.iml
 /captures/
 /app/build/
+
+# Android / Gradle
+.gradle/
+build/
+*/build/
+local.properties
+app/keystore.properties
+*.jks
+*.keystore
+
+keystore.properties
+my-release-key
+# Android Studio
+.idea/
+*.iml
+
+# APK / AAB
+*.apk
+*.aab
+
+# Logs / dumps
+*.log
+*.hprof
+java_pid*.hprof
+
+# OS files
+.DS_Store
+Thumbs.db
