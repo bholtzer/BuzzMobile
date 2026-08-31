@@ -8,7 +8,7 @@ MangoSos is an Android SOS app built with Kotlin, Jetpack Compose, and an MVVM-s
 - Loud siren/alarm playback
 - Flashlight blinking during SOS
 - Direct call to the first configured emergency contact
-- SMS with the user's last known location to all configured emergency contacts
+- Prefilled SMS draft with the user's last known location; the user reviews it and presses Send
 - Compose-based onboarding, setup, and active-SOS screens
 - DataStore-backed local settings
 
@@ -24,7 +24,6 @@ MangoSos is an Android SOS app built with Kotlin, Jetpack Compose, and an MVVM-s
 The app requests these Android permissions as part of setup:
 
 - `CALL_PHONE`
-- `SEND_SMS`
 - `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION`
 - `CAMERA`
 - `POST_NOTIFICATIONS` on newer Android versions

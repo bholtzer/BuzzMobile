@@ -3,11 +3,12 @@ package com.bih.mangosos.data.device
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.telephony.SmsManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.bih.mangosos.R
@@ -31,8 +32,7 @@ class LocationShareHandler(
 
         val hasLocationPermission = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
             hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-        val hasSmsPermission = hasPermission(Manifest.permission.SEND_SMS)
-        if (!hasLocationPermission || !hasSmsPermission) {
+        if (!hasLocationPermission) {
             return LocationShareStatus.PERMISSION_DENIED
         }
 
@@ -44,12 +44,15 @@ class LocationShareHandler(
         )
 
         return try {
-            val smsManager = SmsManager.getDefault()
-            contacts.forEach { number ->
-                smsManager.sendTextMessage(number, null, message, null, null)
+            val recipients = contacts.joinToString(";")
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.fromParts("smsto", recipients, null)
+                putExtra("sms_body", message)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            showToast(R.string.toast_sms_sent)
-            LocationShareStatus.SENT
+            context.startActivity(intent)
+            showToast(R.string.toast_sms_composer_opened)
+            LocationShareStatus.COMPOSER_OPENED
         } catch (_: Exception) {
             LocationShareStatus.FAILED
         }

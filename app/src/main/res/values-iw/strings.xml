@@ -44,7 +44,7 @@
     <string name="home_manual_sos">SOS ידני</string>
     <string name="home_missing">לא הוגדר</string>
     <string name="accessibility_off_title">Mango Guardian לא פעיל במלואו</string>
-    <string name="accessibility_off_body">הנגישות כבויה. הפעלה מכפתורי הווליום ושליחה אוטומטית ב-WhatsApp לא יעבדו. SOS ידני עדיין יכול לפתוח את WhatsApp, אבל ייתכן שתצטרך ללחוץ שלח בעצמך.</string>
+    <string name="accessibility_off_body">הנגישות כבויה, ולכן הפעלת SOS האופציונלית מכפתורי הווליום לא תפעל. Mango Guardian אינו קורא תוכן מהמסך ואינו לוחץ על פקדים באפליקציות אחרות.</string>
     <string name="accessibility_off_button">הפעל נגישות</string>
     <string name="setup_done_title">ההגדרה הושלמה</string>
     <string name="setup_done_subtitle">%1$s, Mango Guardian מוכן.</string>
@@ -104,7 +104,7 @@
     <string name="onboarding_alert_settings_subtitle">הפעלת SOS היא החזקת ווליום למטה + ווליום למעלה יחד למשך 2 שניות ואז לשחרר.</string>
     <string name="onboarding_finish_setup">סיום הגדרה</string>
     <string name="permission_dialog_title">אפשר הרשאות SOS</string>
-    <string name="permission_dialog_body">Mango Guardian צריך גישה לשיחות, SMS, מיקום, מצלמה והתראות כדי לשלוח עזרה במהירות בזמן חירום. המצלמה משמשת לצילום תמונה ולהקלטת וידאו של 30 שניות כאשר SOS מופעל. לחץ המשך ואז אפשר.</string>
+    <string name="permission_dialog_body">Mango Guardian צריך גישה לשיחות, מיקום, מצלמה והתראות. טיוטות SMS ו-WhatsApp נפתחות באפליקציות שלהן ודורשות לחיצה על שלח. המצלמה מצלמת תמונה ווידאו של 30 שניות בעת הפעלת SOS.</string>
     <string name="not_now">לא עכשיו</string>
     <string name="readiness_title">מוכנות</string>
     <string name="readiness_body">אם המכשיר חוסם את כפתורי הווליום כשהמסך נעול, השאר את האפליקציה פעילה עם שירות בקדמת המסך.</string>
@@ -115,8 +115,9 @@
     <string name="contact2_saved_body">איש קשר זה יקבל את התראת WhatsApp. נמשיך לשלב הסופי.</string>
     <string name="same_contact_title">משתמשים באותו איש קשר</string>
     <string name="same_contact_body">אותו אדם יקבל את התראת WhatsApp. נמשיך לשלב הסופי.</string>
-    <string name="accessibility_dialog_body">במסך Android:</string>
-    <string name="accessibility_dialog_title">%1$s, הפעל את Mango Guardian</string>
+    <string name="accessibility_dialog_body">Mango Guardian משתמש ב-AccessibilityService של Android רק כדי לגשת לאירועים של כפתורי עוצמת הקול הפיזיים, גם כשהאפליקציה ברקע או כשהמכשיר נעול. כך ניתן להפעיל SOS בלחיצה ממושכת על הגברת והנמכת עוצמת הקול יחד למשך 2 שניות. השירות אינו קורא או אוסף תוכן מסך, טקסט שהוקלד, אנשי קשר, הודעות או פעילות באפליקציות אחרות; אינו מבצע מחוות או לוחץ על פקדים; ונתוני נגישות אינם נשמרים או משותפים. ניתן לכבות גישה אופציונלית זו בכל עת בהגדרות הנגישות של Android.</string>
+    <string name="accessibility_dialog_title">לאפשר זיהוי SOS באמצעות כפתורי עוצמת הקול?</string>
+    <string name="accessibility_dialog_agree">אני מסכים ולהמשיך</string>
     <string name="accessibility_dialog_step1">1. לחץ על אפליקציות מותקנות.</string>
     <string name="accessibility_dialog_step2">2. לחץ על Mango Guardian.</string>
     <string name="accessibility_dialog_step3">3. הפעל אותו, לחץ אפשר ואז חזור לכאן.</string>
@@ -144,7 +145,7 @@
     <string name="status_not_armed">מצב: לא פעיל</string>
     <string name="easy_setup_title">הגדרה קלה</string>
     <string name="easy_setup_body">השלם את השלבים לפי הסדר. השלב הבא ייפתח אחרי שהקודם הושלם.</string>
-    <string name="permission_summary_phone">שיחות, SMS, מיקום, התראות, תמונה ווידאו של 30 שניות.</string>
+    <string name="permission_summary_phone">שיחות, מיקום, התראות, תמונה ווידאו של 30 שניות. SMS ו-WhatsApp דורשים לחיצה על שלח.</string>
     <string name="accessibility_is_on">הנגישות פעילה.</string>
     <string name="accessibility_guided_subtitle">לחץ כאן, לחץ על אפליקציות מותקנות, בחר Mango Guardian והפעל אותו.</string>
     <string name="permission_summary_overlay">מאפשר למסך SOS להופיע מעל אפליקציות אחרות.</string>
@@ -182,8 +183,9 @@
     <string name="emergency_sms_message">התראת חירום מ-Mango Guardian: ייתכן ש-%1$s זקוק לעזרה. מיקום אחרון ידוע: %2$s</string>
     <string name="emergency_whatsapp_message">התראת חירום מ-Mango Guardian: ייתכן ש-%1$s זקוק לעזרה עכשיו. %2$s</string>
     <string name="toast_sms_sent">הודעת SMS נשלחה.</string>
+    <string name="toast_sms_composer_opened">טיוטת ה-SMS נפתחה. בדוק את ההודעה ולחץ על שלח.</string>
     <string name="toast_whatsapp_sent">הודעת WhatsApp נשלחה.</string>
-    <string name="toast_whatsapp_manual_send_needed">WhatsApp נפתח. לחץ שלח ידנית כי הנגישות כבויה.</string>
+    <string name="toast_whatsapp_manual_send_needed">WhatsApp נפתח. בדוק את ההתראה ולחץ על שלח.</string>
     <string name="legal_privacy_policy">מדיניות פרטיות</string>
     <string name="legal_terms_conditions">תנאי שימוש</string>
     <string name="legal_close">סגור</string>
@@ -194,6 +196,9 @@
     <string name="privacy_policy_p5">כאשר SOS מופעל, מידע עשוי להישלח לאנשי הקשר שבחרת דרך שיחות, SMS, WhatsApp או פעולות מערכת Android.</string>
     <string name="privacy_policy_p6">אפשר לשנות או להסיר הרשאות בהגדרות Android. חלק מתכונות SOS עלולות להפסיק לעבוד אם הרשאות נדרשות כבויות.</string>
     <string name="privacy_policy_p7">מחיקת האפליקציה מסירה את נתוני האפליקציה המקומיים מהמכשיר. הודעות שכבר נשלחו לאנשי קשר נשארות אצל אותם נמענים ובשירותים שלהם.</string>
+    <string name="privacy_policy_p8">אם תפעיל אנליטיקה, Mango Guardian עשוי לאסוף אירועי שימוש אנונימיים כמו פתיחת האפליקציה, בחירת שפה, סיום onboarding ולחיצה על SOS ידני. האנליטיקה לא כוללת שמות, מספרי טלפון, אנשי קשר, מיקום, תמונות, שיחות, תוכן SMS או תוכן WhatsApp.</string>
+    <string name="privacy_policy_p9">כאשר SOS שולח התראת חירום ב-SMS או WhatsApp, Mango Guardian עשוי לשמור דוח חירום ב-Firebase. הדוח יכול לכלול את שם האדם המוגן, אנשי הקשר שנבחרו, איש קשר WhatsApp, מקור ההפעלה, מצב שיחה/SMS, מיקום אחרון, קישור למפה, תמונת SOS ווידאו SOS של 30 שניות אם צולמו.</string>
+    <string name="privacy_policy_contact">לשאלות או בקשות בנושא פרטיות, אפשר ליצור קשר בכתובת mangosos.support@gmail.com.</string>
     <string name="terms_conditions_p1">Mango Guardian פותח על ידי BIH Studio. בשימוש ב-Mango Guardian, אתה מסכים להשתמש באפליקציה רק למטרות חוקיות הקשורות לבטיחות.</string>
     <string name="terms_conditions_p2">Mango Guardian אינו תחליף למשטרה, אמבולנס, כיבוי אש, שירות רפואי או שירותי חירום רשמיים.</string>
     <string name="terms_conditions_p3">האחריות לבחור אנשי קשר נכונים, לעדכן מספרי טלפון ולוודא שההרשאות פעילות היא על המשתמש.</string>
@@ -201,8 +206,5 @@
     <string name="terms_conditions_p5">יש להשתמש באפליקציה רק בהסכמת האדם המוגן ובהסכמת אנשי הקשר שעשויים לקבל התראות חירום.</string>
     <string name="terms_conditions_p6">שיחות, SMS, נתונים סלולריים ושימוש באפליקציות צד שלישי עשויים ליצור חיובים מצד ספק הסלולר או נותני שירותים.</string>
     <string name="terms_conditions_p7">האפליקציה מסופקת כמו שהיא. כאשר נדרש סיוע מיידי, יש לפנות ישירות לשירותי החירום המקומיים.</string>
-    <string name="privacy_policy_p8">אם תפעיל אנליטיקה, Mango Guardian עשוי לאסוף אירועי שימוש אנונימיים כמו פתיחת האפליקציה, בחירת שפה, סיום onboarding ולחיצה על SOS ידני. האנליטיקה לא כוללת שמות, מספרי טלפון, אנשי קשר, מיקום, תמונות, שיחות, תוכן SMS או תוכן WhatsApp.</string>
-    <string name="privacy_policy_p9">כאשר SOS שולח התראת חירום ב-SMS או WhatsApp, Mango Guardian עשוי לשמור דוח חירום ב-Firebase. הדוח יכול לכלול את שם האדם המוגן, אנשי הקשר שנבחרו, איש קשר WhatsApp, מקור ההפעלה, מצב שיחה/SMS, מיקום אחרון, קישור למפה, תמונת SOS ווידאו SOS של 30 שניות אם צולמו.</string>
-    <string name="privacy_policy_contact">לשאלות או בקשות בנושא פרטיות, אפשר ליצור קשר בכתובת mangosos.support@gmail.com.</string>
     <string name="terms_conditions_contact">לתמיכה, אפשר ליצור קשר בכתובת mangosos.support@gmail.com.</string>
 </resources>

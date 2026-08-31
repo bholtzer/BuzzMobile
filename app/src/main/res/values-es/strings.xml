@@ -12,7 +12,7 @@
     <string name="onboarding_open_subtitle">Ayuda rápida en emergencias, paso a paso.</string>
     <string name="onboarding_open_body">Configuraremos la aplicación juntos. Siempre sabrás qué tocar y cuál es el paso actual.</string>
     <string name="analytics_consent_title">Ayuda a mejorar Mango Guardian</string>
-    <string name="analytics_consent_body">Comparte analiticas anonimas de uso. No recopilamos nombres, numeros de telefono, contactos, ubicacion, fotos, llamadas ni mensajes para analiticas.</string>
+    <string name="analytics_consent_body">Comparte analiticas anonimas de uso. No recopilamos nombres, numeros de telefono, contactos, ubicación, fotos, llamadas ni mensajes para analiticas.</string>
     <string name="onboarding_continue">Continuar</string>
     <string name="onboarding_name_title">Antes de empezar</string>
     <string name="onboarding_name_subtitle">Ingresa el nombre de la persona protegida.</string>
@@ -44,7 +44,7 @@
     <string name="home_manual_sos">SOS manual</string>
     <string name="home_missing">Sin configurar</string>
     <string name="accessibility_off_title">Mango Guardian no está totalmente activo</string>
-    <string name="accessibility_off_body">La accesibilidad está desactivada. El activador con botones de volumen y el envío automático por WhatsApp no funcionarán. SOS manual aún puede abrir WhatsApp, pero quizá tengas que presionar Enviar.</string>
+    <string name="accessibility_off_body">La accesibilidad está desactivada, por lo que el activador opcional con botones de volumen no funcionará. Mango Guardian no lee la pantalla ni pulsa controles de otras apps.</string>
     <string name="accessibility_off_button">Activar accesibilidad</string>
     <string name="setup_done_title">Configuración completa</string>
     <string name="setup_done_subtitle">%1$s, Mango Guardian está listo.</string>
@@ -104,7 +104,7 @@
     <string name="onboarding_alert_settings_subtitle">El activador SOS es mantener Volumen abajo + Volumen arriba juntos durante 2 segundos y soltar.</string>
     <string name="onboarding_finish_setup">Finalizar configuración</string>
     <string name="permission_dialog_title">Permitir permisos SOS</string>
-    <string name="permission_dialog_body">Mango Guardian necesita llamadas, SMS, ubicación, cámara y notificaciones para enviar ayuda rápido durante una emergencia. La cámara se usa para tomar una foto y grabar un video de 30 segundos cuando se activa SOS. Presiona Continuar y luego Permitir.</string>
+    <string name="permission_dialog_body">Mango Guardian necesita llamadas, ubicación, cámara y notificaciones. Los borradores de SMS y WhatsApp requieren que pulses Enviar. La cámara toma una foto y graba un video de 30 segundos al activar SOS.</string>
     <string name="not_now">Ahora no</string>
     <string name="readiness_title">Estado de preparación</string>
     <string name="readiness_body">Si tu dispositivo bloquea los botones de volumen con la pantalla bloqueada, mantén la app armada con el servicio en primer plano.</string>
@@ -115,8 +115,9 @@
     <string name="contact2_saved_body">Este contacto recibirá la alerta de WhatsApp. Continuaremos con el paso final.</string>
     <string name="same_contact_title">Usando el mismo contacto</string>
     <string name="same_contact_body">La misma persona recibirá la alerta de WhatsApp. Continuaremos con el paso final.</string>
-    <string name="accessibility_dialog_body">En la pantalla de Android:</string>
-    <string name="accessibility_dialog_title">%1$s, activa Mango Guardian</string>
+    <string name="accessibility_dialog_body">Mango Guardian usa AccessibilityService de Android únicamente para acceder a los eventos de los botones físicos de volumen, incluso cuando la app está en segundo plano o el dispositivo está bloqueado. Esto permite activar SOS manteniendo Volumen arriba y Volumen abajo durante 2 segundos. El servicio no lee ni recopila contenido de pantalla, texto escrito, contactos, mensajes ni actividad de otras apps; no realiza gestos ni pulsa controles; y los datos de accesibilidad no se almacenan ni comparten. Este acceso opcional puede desactivarse en cualquier momento en los ajustes de Accesibilidad de Android.</string>
+    <string name="accessibility_dialog_title">¿Permitir la detección de SOS con los botones de volumen?</string>
+    <string name="accessibility_dialog_agree">Aceptar y continuar</string>
     <string name="accessibility_dialog_step1">1. Presiona Apps instaladas.</string>
     <string name="accessibility_dialog_step2">2. Presiona Mango Guardian.</string>
     <string name="accessibility_dialog_step3">3. Actívalo, presiona Permitir y vuelve aquí.</string>
@@ -144,7 +145,7 @@
     <string name="status_not_armed">Estado: no armado</string>
     <string name="easy_setup_title">Configuración fácil</string>
     <string name="easy_setup_body">Completa estos pasos en orden. El siguiente paso se abre cuando terminas el anterior.</string>
-    <string name="permission_summary_phone">Llamadas, SMS, ubicación, notificaciones, foto y video de 30 segundos.</string>
+    <string name="permission_summary_phone">Llamadas, ubicación, notificaciones, foto y video de 30 segundos. SMS y WhatsApp requieren pulsar Enviar.</string>
     <string name="accessibility_is_on">Accesibilidad activada.</string>
     <string name="accessibility_guided_subtitle">Toca aquí, presiona Apps instaladas, elige Mango Guardian y actívalo.</string>
     <string name="permission_summary_overlay">Permite que la pantalla SOS aparezca sobre otras apps.</string>
@@ -182,8 +183,9 @@
     <string name="emergency_sms_message">Alerta de emergencia de Mango Guardian: %1$s puede necesitar ayuda. Última ubicación conocida: %2$s</string>
     <string name="emergency_whatsapp_message">Alerta de emergencia de Mango Guardian: %1$s puede necesitar ayuda ahora. %2$s</string>
     <string name="toast_sms_sent">SMS enviado.</string>
+    <string name="toast_sms_composer_opened">Borrador de SMS abierto. Revíselo y pulse Enviar.</string>
     <string name="toast_whatsapp_sent">Mensaje de WhatsApp enviado.</string>
-    <string name="toast_whatsapp_manual_send_needed">WhatsApp se abrió. Presiona Enviar manualmente porque la accesibilidad está desactivada.</string>
+    <string name="toast_whatsapp_manual_send_needed">WhatsApp se abrió. Revisa la alerta y pulsa Enviar.</string>
     <string name="legal_privacy_policy">Política de privacidad</string>
     <string name="legal_terms_conditions">Términos y condiciones</string>
     <string name="legal_close">Cerrar</string>

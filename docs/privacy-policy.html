@@ -79,7 +79,7 @@
     <ul>
       <li>Configure the emergency setup chosen by the user.</li>
       <li>Start emergency actions when SOS is triggered.</li>
-      <li>Call, send SMS messages, and open or send WhatsApp alerts to selected contacts.</li>
+      <li>Place a phone call and open prefilled SMS or WhatsApp drafts for selected contacts. The user must review each message and press Send.</li>
       <li>Share the user's last known location with selected emergency contacts.</li>
       <li>Attach emergency media, such as a photo, when supported by the selected alert method.</li>
       <li>Save an emergency report in Firebase so emergency information is available for safety follow-up.</li>
@@ -99,12 +99,13 @@
       link in emergency alerts. Location is used for SOS alerts and emergency reporting.
     </p>
 
-    <h2>Phone, SMS, Notification, and Accessibility Permissions</h2>
+    <h2>Phone, Messaging, Notification, and Accessibility</h2>
     <p>
-      Mango Guardian requests phone and SMS permissions to call and text the emergency contacts chosen by the
-      user. Notification permission may be used to show urgent app status. Accessibility permission is used to
-      support the hardware volume-button SOS trigger and to help complete the WhatsApp emergency send flow when
-      the user has enabled this service in Android settings.
+      Mango Guardian requests phone permission to call the emergency contact chosen by the user. It does not
+      request SMS permission. Instead, it opens the device SMS app or WhatsApp with a prefilled alert, and the
+      user must review the message and press Send. Notification permission may be used to show urgent app status.
+      The optional Accessibility service is used only to detect the configured hardware volume-button SOS trigger.
+      It does not read screen content, inspect other apps, perform gestures, or press controls in other apps.
     </p>
 
     <h2>Firebase and Analytics</h2>
@@ -119,7 +120,7 @@
     <h2>Sharing Information</h2>
     <p>Mango Guardian may share emergency information with:</p>
     <ul>
-      <li>The emergency contacts selected by the user, through phone calls, SMS, or WhatsApp.</li>
+      <li>The emergency contacts selected by the user through phone calls and through SMS or WhatsApp messages that the user reviews and sends.</li>
       <li>Google Firebase, for emergency reports, media storage, and optional analytics.</li>
       <li>Android system services and third-party apps used to complete emergency actions, such as WhatsApp, phone, SMS, camera, and maps.</li>
     </ul>
@@ -129,8 +130,9 @@
 
     <h2>Local Storage and Retention</h2>
     <p>
-      App setup data is stored locally on the device. Emergency reports stored in Firebase may be retained for
-      safety follow-up unless deletion is requested or the data is no longer needed. Messages already sent by
+      App setup data is stored locally on the device. Emergency reports stored in Firebase are retained for
+      safety follow-up until deletion is requested. Email mangosos.support@gmail.com with enough information to
+      identify the report. We will process verified deletion requests within 30 days. Messages already sent by
       SMS or WhatsApp remain with the recipients and with those third-party services according to their own policies.
     </p>
 

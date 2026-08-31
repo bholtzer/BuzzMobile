@@ -158,8 +158,8 @@ class SosCoordinator(
             CallStatus.IDLE -> "Emergency call status is idle."
         }
         val locationMessage = when (locationShareStatus) {
-            LocationShareStatus.SENT -> "Location SMS sent to all emergency contacts."
-            LocationShareStatus.PERMISSION_DENIED -> "Location SMS could not be sent because SMS or location permission is missing."
+            LocationShareStatus.COMPOSER_OPENED -> "A location SMS draft was opened. Review it and tap Send."
+            LocationShareStatus.PERMISSION_DENIED -> "A location SMS draft could not be prepared because location permission is missing."
             LocationShareStatus.LOCATION_UNAVAILABLE -> "Location SMS could not be sent because no recent location was available."
             LocationShareStatus.NO_CONTACTS -> "No emergency contacts were available for location sharing."
             LocationShareStatus.FAILED -> "Location SMS failed."

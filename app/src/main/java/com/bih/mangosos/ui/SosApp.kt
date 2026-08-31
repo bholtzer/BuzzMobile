@@ -200,7 +200,6 @@ fun SosApp(application: SosApplication) {
     val overlayPermission = remember(refreshTrigger) { isOverlayPermissionGranted(context) }
     
     val callPermission = remember(refreshTrigger) { ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED }
-    val smsPermission = remember(refreshTrigger) { ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED }
     val cameraPermission = remember(refreshTrigger) { ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED }
     val fineLocationPermission = remember(refreshTrigger) { ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED }
     val postNotificationsPermission = remember(refreshTrigger) {
@@ -211,7 +210,7 @@ fun SosApp(application: SosApplication) {
         }
     }
 
-    val criticalPermissionsGranted = callPermission && smsPermission && fineLocationPermission && 
+    val criticalPermissionsGranted = callPermission && fineLocationPermission &&
                                    cameraPermission && postNotificationsPermission
 
     val onboardingComplete = accessibilityEnabled && batteryIgnored && criticalPermissionsGranted && overlayPermission
@@ -239,7 +238,6 @@ fun SosApp(application: SosApplication) {
     val permissionList = remember {
         buildList {
             add(Manifest.permission.CALL_PHONE)
-            add(Manifest.permission.SEND_SMS)
             add(Manifest.permission.ACCESS_FINE_LOCATION)
             add(Manifest.permission.ACCESS_COARSE_LOCATION)
             add(Manifest.permission.CAMERA)
@@ -491,8 +489,8 @@ private fun EmergencyInformationScreen(
                         Text(
                             stringResource(R.string.home_emergency_information),
                             style = MaterialTheme.typography.headlineMedium.copy(
-                                fontSize = 28.sp,
-                                lineHeight = 32.sp,
+                                fontSize = 24.sp,
+                                lineHeight = 28.sp,
                             ),
                             fontWeight = FontWeight.Black,
                             color = MangoText,
@@ -1704,12 +1702,12 @@ private fun FirstRunOnboardingScreen(
         )
     }
 
-    val accessibilityDialogTitle = stringResource(R.string.accessibility_dialog_title, protectedPersonName)
+    val accessibilityDialogTitle = stringResource(R.string.accessibility_dialog_title)
     val accessibilityDialogBody = stringResource(R.string.accessibility_dialog_body)
     val accessibilityDialogStep1 = stringResource(R.string.accessibility_dialog_step1)
     val accessibilityDialogStep2 = stringResource(R.string.accessibility_dialog_step2)
     val accessibilityDialogStep3 = stringResource(R.string.accessibility_dialog_step3)
-    val accessibilityDialogContinue = stringResource(R.string.onboarding_continue)
+    val accessibilityDialogContinue = stringResource(R.string.accessibility_dialog_agree)
     val accessibilityDialogNotNow = stringResource(R.string.not_now)
 
     if (showAccessibilityTutorialDialog && !accessibilityEnabled) {
@@ -1720,6 +1718,9 @@ private fun FirstRunOnboardingScreen(
             },
             text = {
                 Column(
+                    modifier = Modifier
+                        .heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
@@ -2470,7 +2471,7 @@ private fun OnboardingWelcomePage() {
             title = "What the app does",
             lines = listOf(
                 "Calls the main emergency contact.",
-                "Sends a text message with location.",
+                "Opens a text message with location for the user to send.",
                 "Can open WhatsApp with alert details.",
                 "Shows the SOS screen quickly when triggered.",
             ),
@@ -2500,7 +2501,7 @@ private fun OnboardingPermissionsPage() {
         OnboardingInfoCard(
             title = "Permissions explained simply",
             lines = listOf(
-                "Phone and SMS: to call and text trusted contacts.",
+                "Phone: to call a trusted contact. SMS drafts open in the phone's messaging app.",
                 "Location: to share where the user is.",
                 "Camera: to attach a photo when needed.",
                 "Accessibility and battery settings: to keep the trigger working in the background.",

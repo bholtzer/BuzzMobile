@@ -52,7 +52,7 @@ enum class CallStatus {
 
 enum class LocationShareStatus {
     IDLE,
-    SENT,
+    COMPOSER_OPENED,
     PERMISSION_DENIED,
     LOCATION_UNAVAILABLE,
     NO_CONTACTS,
