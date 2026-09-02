@@ -7,4 +7,5 @@
     android:canRetrieveWindowContent="false"
     android:description="@string/accessibility_service_description"
     android:notificationTimeout="100"
-    android:settingsActivity="mangosos.MainActivity" />
+    android:isAccessibilityTool="false"
+    android:settingsActivity="com.bih.mangosos.MainActivity" />

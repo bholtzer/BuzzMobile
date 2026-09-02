@@ -31,7 +31,10 @@ class TriggerDetector {
         now: Long = System.currentTimeMillis(),
         onTrigger: () -> Unit
     ): Boolean {
-        if (!settings.canUseHardwareTrigger()) return false
+        if (!settings.canUseHardwareTrigger()) {
+            reset()
+            return false
+        }
 
         val isVolumeUp = keyCode == KeyEvent.KEYCODE_VOLUME_UP
         val isVolumeDown = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
@@ -87,6 +90,7 @@ class TriggerDetector {
     }
 
     private fun SosSettings.canUseHardwareTrigger(): Boolean {
-        return enabled || (onboardingSeen && PhoneNumberValidator.isValid(emergencyNumber))
+        return accessibilityConsentGranted &&
+            (enabled || (onboardingSeen && PhoneNumberValidator.isValid(emergencyNumber)))
     }
 }

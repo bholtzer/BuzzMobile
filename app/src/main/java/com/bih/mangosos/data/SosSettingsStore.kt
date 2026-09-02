@@ -30,6 +30,7 @@ class SosSettingsStore(
         val whatsappContactName = stringPreferencesKey("whatsapp_contact_name")
         val enabled = booleanPreferencesKey("enabled")
         val onboardingSeen = booleanPreferencesKey("onboarding_seen")
+        val accessibilityConsentGranted = booleanPreferencesKey("accessibility_consent_v1")
         val analyticsEnabled = booleanPreferencesKey("analytics_enabled")
         val sirenVolumeFraction = floatPreferencesKey("siren_volume_fraction")
         val triggerType = stringPreferencesKey("trigger_type")
@@ -58,6 +59,7 @@ class SosSettingsStore(
             prefs[Keys.whatsappContactName] = updated.whatsappContactName
             prefs[Keys.enabled] = updated.enabled
             prefs[Keys.onboardingSeen] = updated.onboardingSeen
+            prefs[Keys.accessibilityConsentGranted] = updated.accessibilityConsentGranted
             prefs[Keys.analyticsEnabled] = updated.analyticsEnabled
             prefs[Keys.sirenVolumeFraction] = updated.sirenVolumeFraction
             prefs[Keys.triggerType] = updated.triggerType.name
@@ -78,6 +80,7 @@ class SosSettingsStore(
             whatsappContactName = preferences[Keys.whatsappContactName].orEmpty(),
             enabled = preferences[Keys.enabled] ?: false,
             onboardingSeen = preferences[Keys.onboardingSeen] ?: false,
+            accessibilityConsentGranted = preferences[Keys.accessibilityConsentGranted] ?: false,
             analyticsEnabled = preferences[Keys.analyticsEnabled] ?: false,
             sirenVolumeFraction = preferences[Keys.sirenVolumeFraction] ?: 1f,
             triggerType = try {

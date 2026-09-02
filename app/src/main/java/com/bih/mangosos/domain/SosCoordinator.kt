@@ -41,6 +41,8 @@ class SosCoordinator(
     fun startSos(source: TriggerSource) {
         if (_runtimeState.value.mode == SosMode.SOS_ACTIVE) return
         val settings = settingsRepository.settings.value
+        // Activity intents must not bypass the hardware trigger's disclosure consent gate.
+        if (source == TriggerSource.HARDWARE_BUTTONS && !settings.accessibilityConsentGranted) return
         
         // 1. Immediate State Change & Tactile Feedback
         _runtimeState.value = SosRuntimeState(

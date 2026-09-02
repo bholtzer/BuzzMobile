@@ -106,6 +106,11 @@
       user must review the message and press Send. Notification permission may be used to show urgent app status.
       The optional Accessibility service is used only to detect the configured hardware volume-button SOS trigger.
       It does not read screen content, inspect other apps, perform gestures, or press controls in other apps.
+      Raw key events are processed on the device and are not saved or shared. An emergency report may record
+      that volume buttons triggered the SOS and send that fact to Google Firebase with the report.
+      Before hardware SOS detection can operate, the user must accept the separate in-app accessibility
+      disclosure and enable the service in Android settings. Users may decline and continue setup for manual
+      SOS, or disable the service later in Android Accessibility settings.
     </p>
 
     <h2>Firebase and Analytics</h2>

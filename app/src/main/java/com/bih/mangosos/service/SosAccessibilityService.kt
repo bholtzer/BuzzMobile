@@ -10,6 +10,7 @@ import com.bih.mangosos.domain.TriggerDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -26,7 +27,16 @@ class SosAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
-    override fun onInterrupt() = Unit
+    override fun onInterrupt() {
+        chordHoldJob?.cancel()
+        detector.reset()
+    }
+
+    override fun onDestroy() {
+        serviceScope.cancel()
+        detector.reset()
+        super.onDestroy()
+    }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val appContainer = (application as SosApplication).appContainer

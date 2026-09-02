@@ -117,6 +117,10 @@ import com.bih.mangosos.domain.PhoneNumberValidator
 import com.bih.mangosos.service.SosAccessibilityService
 import java.util.Locale
 
+private val LocalRequestAccessibility = androidx.compose.runtime.staticCompositionLocalOf<() -> Unit> {
+    error("Accessibility disclosure host is missing")
+}
+
 private val MangoInk = Color(0xFF101828)
 private val MangoSurface = Color(0xFFFFFBF7)
 private val MangoSurfaceAlt = Color(0xFFF4F7F9)
@@ -179,6 +183,8 @@ fun SosApp(application: SosApplication) {
     }
     val activity = baseContext.findActivity()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showAccessibilityDisclosure by rememberSaveable { mutableStateOf(false) }
+    val requestAccessibility: () -> Unit = { showAccessibilityDisclosure = true }
     var showPermissionRationale by rememberSaveable { mutableStateOf(false) }
     var permissionRequestAttempted by rememberSaveable { mutableStateOf(false) }
 
@@ -195,7 +201,8 @@ fun SosApp(application: SosApplication) {
         onPauseOrDispose { }
     }
 
-    val accessibilityEnabled = remember(refreshTrigger) { isAccessibilityServiceEnabled(context) }
+    val accessibilityEnabled = remember(refreshTrigger) { isAccessibilityServiceEnabled(context) } &&
+        settings.accessibilityConsentGranted
     val batteryIgnored = remember(refreshTrigger) { isBatteryOptimizationIgnored(context) }
     val overlayPermission = remember(refreshTrigger) { isOverlayPermissionGranted(context) }
     
@@ -268,6 +275,7 @@ fun SosApp(application: SosApplication) {
 
     key(effectiveLanguageCode) {
         CompositionLocalProvider(
+            LocalRequestAccessibility provides requestAccessibility,
             LocalContext provides context,
             LocalConfiguration provides localizedConfiguration,
             LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
@@ -318,12 +326,37 @@ fun SosApp(application: SosApplication) {
                             currentSettings = settings.copy(languageCode = effectiveLanguageCode),
                             runtimeMode = runtimeState.mode,
                             accessibilityEnabled = accessibilityEnabled,
-                            onOpenAccessibility = { openAccessibilityServiceSettings(context) },
+                            onOpenAccessibility = { requestAccessibility() },
                             onManualSos = viewModel::triggerManualSos,
                             onSaveSettings = viewModel::saveSettings,
                         )
                     }
                 }
+            }
+
+            if (showAccessibilityDisclosure) {
+                AlertDialog(
+                    onDismissRequest = { showAccessibilityDisclosure = false },
+                    title = { Text(stringResource(R.string.accessibility_dialog_title)) },
+                    text = {
+                        Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
+                            Text(stringResource(R.string.accessibility_dialog_body))
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            viewModel.acceptAccessibilityDisclosure {
+                                showAccessibilityDisclosure = false
+                                launchAccessibilityServiceSettings(context)
+                            }
+                        }) { Text(stringResource(R.string.accessibility_dialog_agree)) }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showAccessibilityDisclosure = false }) {
+                            Text(stringResource(R.string.not_now))
+                        }
+                    },
+                )
             }
 
             if (showPermissionRationale) {
@@ -1219,7 +1252,7 @@ private fun FirstRunOnboardingScreen(
     }
     val hasWhatsappStep = isWhatsappInstalled
     val whatsappReady = !hasWhatsappStep || whatsappValid
-    val setupReady = draftUserName.isNotBlank() && numberValid && whatsappReady && criticalPermissionsGranted && accessibilityEnabled && batteryIgnored && overlayPermission
+    val setupReady = draftUserName.isNotBlank() && numberValid && whatsappReady && criticalPermissionsGranted && batteryIgnored && overlayPermission
     val protectedPersonName = draftUserName.trim()
     val totalSteps = if (hasWhatsappStep) 8 else 7
     val visibleStep = currentStep.coerceAtLeast(1)
@@ -1245,7 +1278,7 @@ private fun FirstRunOnboardingScreen(
         else -> stringResource(R.string.onboarding_subtitle_alert_settings)
     }
 
-    val openAccessibilitySettings: () -> Unit = { openAccessibilityServiceSettings(context) }
+    val requestAccessibility = LocalRequestAccessibility.current
 
     val openOverlaySettings: () -> Unit = {
         context.startActivity(
@@ -1549,6 +1582,11 @@ private fun FirstRunOnboardingScreen(
                         label = if (accessibilityEnabled) stringResource(R.string.onboarding_done) else stringResource(R.string.onboarding_open_Mango_screen),
                         onClick = if (accessibilityEnabled) goToNextStep else ({ showAccessibilityTutorialDialog = true }),
                     )
+                    if (!accessibilityEnabled) {
+                        OutlinedButton(onClick = goToNextStep) {
+                            Text(stringResource(R.string.accessibility_skip))
+                        }
+                    }
                 }
 
                 3 -> OnboardingSectionCard(
@@ -1702,54 +1740,11 @@ private fun FirstRunOnboardingScreen(
         )
     }
 
-    val accessibilityDialogTitle = stringResource(R.string.accessibility_dialog_title)
-    val accessibilityDialogBody = stringResource(R.string.accessibility_dialog_body)
-    val accessibilityDialogStep1 = stringResource(R.string.accessibility_dialog_step1)
-    val accessibilityDialogStep2 = stringResource(R.string.accessibility_dialog_step2)
-    val accessibilityDialogStep3 = stringResource(R.string.accessibility_dialog_step3)
-    val accessibilityDialogContinue = stringResource(R.string.accessibility_dialog_agree)
-    val accessibilityDialogNotNow = stringResource(R.string.not_now)
-
-    if (showAccessibilityTutorialDialog && !accessibilityEnabled) {
-        AlertDialog(
-            onDismissRequest = { showAccessibilityTutorialDialog = false },
-            title = {
-                Text(accessibilityDialogTitle)
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .heightIn(max = 480.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(
-                        accessibilityDialogBody,
-                        color = MangoMuted,
-                    )
-                    PermissionHintCard(accessibilityDialogStep1)
-                    PermissionHintCard(accessibilityDialogStep2)
-                    PermissionHintCard(accessibilityDialogStep3)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showAccessibilityTutorialDialog = false
-                        openAccessibilitySettings()
-                    },
-                ) {
-                    Text(accessibilityDialogContinue)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showAccessibilityTutorialDialog = false },
-                ) {
-                    Text(accessibilityDialogNotNow)
-                }
-            },
-        )
+    LaunchedEffect(showAccessibilityTutorialDialog) {
+        if (showAccessibilityTutorialDialog) {
+            showAccessibilityTutorialDialog = false
+            requestAccessibility()
+        }
     }
 }
 
@@ -2628,11 +2623,12 @@ private fun OnboardingInfoCard(
 
 @Composable
 private fun ShortcutWarningCard(context: Context) {
+    val requestAccessibility = LocalRequestAccessibility.current
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0x33F97316)),
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth().clickable {
-            openAccessibilityServiceSettings(context)
+            requestAccessibility()
         }
     ) {
         Row(
@@ -2920,6 +2916,7 @@ private fun PermissionsCard(
     criticalPermissionsGranted: Boolean,
     onRequestPermissions: () -> Unit,
 ) {
+    val requestAccessibility = LocalRequestAccessibility.current
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF25121D)),
         shape = RoundedCornerShape(28.dp),
@@ -2936,7 +2933,7 @@ private fun PermissionsCard(
                 icon = Icons.Rounded.Security,
                 description = stringResource(R.string.requirement_accessibility_description)
             ) {
-                openAccessibilityServiceSettings(context)
+                requestAccessibility()
             }
             
             PermissionRow(
@@ -3123,7 +3120,7 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
         ?.any { it.resolveInfo.serviceInfo.packageName == context.packageName } ?: false
 }
 
-private fun openAccessibilityServiceSettings(context: Context) {
+private fun launchAccessibilityServiceSettings(context: Context) {
     val componentName = ComponentName(context, SosAccessibilityService::class.java)
     val directIntent = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").apply {
         putExtra(

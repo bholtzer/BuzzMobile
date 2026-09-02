@@ -15,6 +15,7 @@ data class SosSettings(
     val whatsappContactName: String = "",
     val enabled: Boolean = false,
     val onboardingSeen: Boolean = false,
+    val accessibilityConsentGranted: Boolean = false,
     val analyticsEnabled: Boolean = false,
     val sirenVolumeFraction: Float = 1f,
     val triggerType: TriggerType = TriggerType.VOLUME_CHORD,

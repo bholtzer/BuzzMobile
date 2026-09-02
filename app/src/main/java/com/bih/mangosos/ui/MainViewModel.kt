@@ -34,7 +34,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             val savedSettings = settings.copy(enabled = true, onboardingSeen = true)
-            appContainer.settingsStore.updateSettings { savedSettings }
+            appContainer.settingsStore.updateSettings { savedSettings.copy(accessibilityConsentGranted = it.accessibilityConsentGranted) }
             appContainer.sosCoordinator.setArmed(true)
             trackIfAllowed("settings_saved")
             appContainer.monitoringServiceController.start()
@@ -56,6 +56,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 appContainer.monitoringServiceController.stop()
             }
+        }
+    }
+
+    fun acceptAccessibilityDisclosure(onAccepted: () -> Unit) {
+        viewModelScope.launch {
+            appContainer.settingsStore.updateSettings { it.copy(accessibilityConsentGranted = true) }
+            onAccepted()
         }
     }
 
@@ -93,7 +100,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             val completed = settings.copy(onboardingSeen = true, enabled = true)
-            appContainer.settingsStore.updateSettings { completed }
+            appContainer.settingsStore.updateSettings { completed.copy(accessibilityConsentGranted = it.accessibilityConsentGranted) }
             appContainer.sosCoordinator.setArmed(true)
             trackIfAllowed("onboarding_completed")
             appContainer.monitoringServiceController.start()

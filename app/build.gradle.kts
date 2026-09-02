@@ -45,10 +45,9 @@ android {
     defaultConfig {
         applicationId = "com.bih.mangosos"
         minSdk = 28
-        //noinspection OldTargetApi
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0.4"
+        versionCode = 12
+        versionName = "1.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

@@ -17,7 +17,7 @@ MangoSos is an Android SOS app built with Kotlin, Jetpack Compose, and an MVVM-s
 - Enter one or more phone numbers in the setup screen
 - Separate contacts with commas, semicolons, or new lines
 - The first contact is used for direct calling
-- All listed contacts receive the location SMS when SOS starts
+- An SMS draft is prepared for the listed contacts; delivery requires the user to press Send
 
 ## Permissions
 
@@ -32,6 +32,6 @@ It also requires the app's accessibility service to be enabled for background ha
 
 ## Build Notes
 
-- The repository currently includes Gradle build files and wrapper properties
-- `gradle/wrapper/gradle-wrapper.jar` is not present yet, so `./gradlew` or `gradlew.bat` will not run until the wrapper is generated or restored
-- Opening the project in Android Studio is the easiest way to finish local setup
+- Compile SDK and target SDK: Android 16 (API 36).
+- Run `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:bundleRelease` with JDK 21.
+- Play resubmission text and verification steps: [docs/play-console-resubmission.md](docs/play-console-resubmission.md).

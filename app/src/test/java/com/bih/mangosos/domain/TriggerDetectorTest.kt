@@ -10,9 +10,29 @@ class TriggerDetectorTest {
     private val settings = SosSettings(
         emergencyNumber = "112",
         enabled = true,
+        accessibilityConsentGranted = true,
         triggerHoldMs = 1000L,
         cooldownMs = 5000L,
     )
+
+    @Test
+    fun refusesHardwareKeysWithoutDisclosureConsent() {
+        val detector = TriggerDetector()
+        val noConsent = settings.copy(accessibilityConsentGranted = false)
+        val onTrigger = { throw AssertionError("SOS must not start without consent") }
+        assertFalse(detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.ACTION_DOWN, noConsent, 0L, onTrigger))
+        assertFalse(detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.ACTION_DOWN, noConsent, 2000L, onTrigger))
+        assertFalse(detector.triggerIfChordHeld(noConsent, onTrigger))
+    }
+
+    @Test
+    fun pendingHoldCannotTriggerAfterConsentIsRemoved() {
+        val detector = TriggerDetector()
+        val onTrigger = { throw AssertionError("Revoked consent must block pending SOS") }
+        detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.ACTION_DOWN, settings, 0L, onTrigger)
+        detector.processVolumeKeyEvent(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.ACTION_DOWN, settings, 100L, onTrigger)
+        assertFalse(detector.triggerIfChordHeld(settings.copy(accessibilityConsentGranted = false), onTrigger))
+    }
 
     @Test
     fun triggersWhenBothButtonsOverlapLongEnough() {
