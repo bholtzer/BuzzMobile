@@ -13,6 +13,7 @@ internal fun Context.localizedEmergencyContext(languageCode: String): Context {
         "he", "iw" -> "iw"
         "es" -> "es"
         "fr" -> "fr"
+        "ru", "ar", "de", "it" -> languageCode
         else -> "en"
     }
     val locale = Locale(normalizedLanguage)

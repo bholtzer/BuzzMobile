@@ -146,6 +146,10 @@ private val supportedLanguages = listOf(
     AppLanguage("he", "עברית"),
     AppLanguage("es", "Español"),
     AppLanguage("fr", "Français"),
+    AppLanguage("ru", "Русский"),
+    AppLanguage("ar", "العربية"),
+    AppLanguage("de", "Deutsch"),
+    AppLanguage("it", "Italiano"),
 )
 
 private data class PickedContact(
@@ -278,6 +282,10 @@ fun SosApp(application: SosApplication) {
             LocalRequestAccessibility provides requestAccessibility,
             LocalContext provides context,
             LocalConfiguration provides localizedConfiguration,
+            androidx.compose.ui.platform.LocalLayoutDirection provides
+                if (localizedConfiguration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL)
+                    androidx.compose.ui.unit.LayoutDirection.Rtl
+                else androidx.compose.ui.unit.LayoutDirection.Ltr,
             LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
         ) {
             Scaffold(
@@ -3201,6 +3209,10 @@ private fun String.normalizeAppLanguageCode(): String {
         "en", "english" -> "en"
         "he", "iw", "heb", "hebrew" -> "he"
         "es", "spanish" -> "es"
+        "ru", "russian" -> "ru"
+        "ar", "arabic" -> "ar"
+        "de", "german" -> "de"
+        "it", "italian" -> "it"
         "fr", "france", "french", "français", "francais" -> "fr"
         else -> this
     }
